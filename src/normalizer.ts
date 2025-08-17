@@ -1,5 +1,4 @@
 import { Options as AcornOptions } from 'acorn';
-import { isNaN } from './native.js';
 
 const ECMA_VERSIONS = [
   3,
@@ -31,16 +30,11 @@ const ECMA_VERSIONS = [
   'latest',
 ] as const;
 
-type What = AcornOptions['ecmaVersion'] extends (typeof ECMA_VERSIONS)[number]
-  ? (typeof ECMA_VERSIONS)[number] extends AcornOptions['ecmaVersion']
-    ? true
-    : never
-  : never;
+type What = IsSameType<AcornOptions['ecmaVersion'], (typeof ECMA_VERSIONS)[number]>;
 
-function invalidEcmaVersion(ecmaVersion: AcornOptions['ecmaVersion']): boolean {
+function validEcmaVersion(ecmaVersion: unknown): boolean {
   const what: What = true;
-
-  return;
+  return ECMA_VERSIONS.includes(ecmaVersion as (typeof ECMA_VERSIONS)[number]);
 }
 
 function normalize(options: Partial<__OPTS__>): __OPTS__ | string {
@@ -48,7 +42,7 @@ function normalize(options: Partial<__OPTS__>): __OPTS__ | string {
   const variables = Object(options.variables);
   const ecmaVersion = options.ecmaVersion === 'latest' ? 'latest' : Number(options.ecmaVersion);
 
-  if (invalidEcmaVersion(ecmaVersion)) {
+  if (!validEcmaVersion(ecmaVersion)) {
     return `Invalid ecmaVersion: ${options.ecmaVersion}`;
   }
 
