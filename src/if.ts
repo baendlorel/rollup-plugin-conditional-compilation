@@ -1,26 +1,20 @@
-import { Dirv } from './directives.js';
 import * as acorn from 'acorn';
 import type { Plugin } from 'rollup';
-
-interface ConditionalCompilationOptions {
-  globals?: Record<string, any>;
-}
+import { Dirv } from './directives.js';
 
 /**
  *
  * @param options options of the plugin
  */
-export function conditionalCompilation(options: ConditionalCompilationOptions = {}): Plugin {
-  const { globals = {} } = options;
-
+export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
   return {
-    name: 'conditional-compilation',
+    name: '__KEBAB_NAME__',
     transform(code: string, id: string) {
       try {
-        return processConditionalCompilation(code, globals);
+        return proceed(code, globals);
       } catch (error) {
         this.error(
-          `Conditional compilation error in ${id}: ${error instanceof Error ? error.message : error}`
+          `__KEBAB_NAME__: error in ${id} - ${error instanceof Error ? error.message : error}`
         );
       }
     },
@@ -28,66 +22,12 @@ export function conditionalCompilation(options: ConditionalCompilationOptions = 
 }
 
 /**
- * 处理条件编译
- * @param code 源代码
- * @param globals 全局变量
- * @returns 处理后的代码
+ * Analyzing code with acorn
+ * @param code source coude
+ * @param globals global variables
  */
-function processConditionalCompilation(code: string, globals: Record<string, any>): string {
-  const lines = code.split('\n');
-  const result: string[] = [];
-  const stack: { condition: boolean; lineStart: number }[] = [];
-  let currentCondition = true;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // 匹配 if 指令：/**#if expression*/
-    const ifMatch = trimmed.match(
-      new RegExp(`^\\${Dirv.PREFIX}\\s*\\${Dirv.IF}\\s+(.+?)\\s*\\${Dirv.SUFFIX}$`)
-    );
-    if (ifMatch) {
-      const expression = ifMatch[1];
-      try {
-        const conditionResult = evaluateExpression(expression, globals);
-        stack.push({ condition: conditionResult, lineStart: i });
-        currentCondition = currentCondition && conditionResult;
-        continue; // 不输出 if 指令行
-      } catch (error) {
-        throw new Error(
-          `Failed to evaluate expression "${expression}" at line ${i + 1}: ${error instanceof Error ? error.message : error}`
-        );
-      }
-    }
-
-    // 匹配 endif 指令：/**#endif*/
-    const endifMatch = trimmed.match(
-      new RegExp(`^\\${Dirv.PREFIX}\\s*\\${Dirv.ENDIF}\\s*\\${Dirv.SUFFIX}$`)
-    );
-    if (endifMatch) {
-      if (stack.length === 0) {
-        throw new Error(`Unexpected ${Dirv.ENDIF} at line ${i + 1}: no matching ${Dirv.IF}`);
-      }
-      stack.pop();
-      // 重新计算当前条件
-      currentCondition = stack.length === 0 ? true : stack.every((s) => s.condition);
-      continue; // 不输出 endif 指令行
-    }
-
-    // 如果当前条件为真，则保留代码行
-    if (currentCondition) {
-      result.push(line);
-    }
-  }
-
-  // 检查是否有未闭合的 if
-  if (stack.length > 0) {
-    const unclosed = stack[stack.length - 1];
-    throw new Error(`Unclosed ${Dirv.IF} directive starting at line ${unclosed.lineStart + 1}`);
-  }
-
-  return result.join('\n');
+function proceed(code: string, globals: Record<string, any>): string {
+  const ast = acorn.parse(code, { ecmaVersion: 'latest' });
 }
 
 /**
