@@ -1,12 +1,12 @@
 {
-	"name": "<name>",
+	"name": "rollup-plugin-conditional-compilation",
 	"version": "0.0.1",
 	"projectType": "library",
 	"author": {
 		"name": "Kasukabe Tsumugi",
 		"email": "futami16237@gmail.com"
 	},
-	"description": "<name>",
+	"description": "Conditional Compilation macros like #if #endif in C++.",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
@@ -20,10 +20,10 @@
 	"files": [
 		"dist"
 	],
-	"homepage": "https://github.com/baendlorel/<name>#readme",
+	"homepage": "https://github.com/baendlorel/rollup-plugin-conditional-compilation#readme",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/baendlorel/<name>"
+		"url": "https://github.com/baendlorel/rollup-plugin-conditional-compilation"
 	},
 	"keywords": [
 		"deep",
