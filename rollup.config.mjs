@@ -1,4 +1,5 @@
 // @ts-check
+import pkg from './package.json' with { type: 'json' };
 import path from 'node:path';
 
 // plugins
@@ -14,7 +15,6 @@ import dtsMerger from 'rollup-plugin-dts-merger';
 
 // custom plugins
 import { replaceOpts } from './plugins/replace.mjs';
-import { showBundleSize } from './plugins/bundle-size.mjs';
 
 // # common options
 
@@ -35,8 +35,7 @@ const aliasOpts = {
 /**
  * @type {import('rollup').RollupOptions[]}
  */
-export default [
-  // * Main
+const options = [
   {
     input: 'src/index.ts',
     output: [
@@ -90,16 +89,35 @@ export default [
     ],
     external: [],
   },
-  // * Declarations
-  {
-    input: 'src/index.ts',
-    output: [{ file: 'dist/index.d.ts', format: 'es' }],
-    plugins: [
-      alias(aliasOpts),
-      replace(replaceOpts),
-      dts({ tsconfig }),
-      dtsMerger({ replace: replaceOpts }),
-      showBundleSize(['dist']),
-    ],
-  },
 ];
+
+/**
+ * @type {import('rollup').RollupOptions}
+ */
+const declaration = {
+  input: 'src/index.ts',
+  output: [{ file: 'dist/index.d.ts', format: 'es' }],
+  plugins: [
+    alias(aliasOpts),
+    replace(replaceOpts),
+    dts({ tsconfig }),
+    dtsMerger({ replace: replaceOpts }),
+  ],
+};
+
+/**
+ * @type {'library' | 'server' | 'web'}
+ */
+pkg.projectType = 'library';
+switch (pkg.projectType) {
+  case 'library':
+    options.push(declaration);
+    break;
+  case 'server':
+  case 'web':
+    break;
+  default:
+    throw new Error(`Project type must be 'library', 'server', or 'web'. Got '${pkg.projectType}'`);
+}
+
+export default options;
