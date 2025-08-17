@@ -11,7 +11,9 @@ type Tuple = ['a', 'b', 'c'] as const; // as const 不能遗漏哦
 type Union = (typeof Tuple)[number]; // 'a' | 'b' | 'c'
 ```
 
-但反过来，在进行了一些徒劳的尝试和资料查询后，发现**无法直接将联合类型转化为元组类型**。因为联合类型本质上是无序的集合，而元组类型是有序的列表，TypeScript 类型系统无法保证顺序和长度。
+但反过来，在进行了一些徒劳的尝试和资料查询后发现,**无法直接将联合类型转化为元组类型**（；´д｀）ゞ。
+
+因为联合类型本质上是无序的集合，而元组类型是有序的列表，TypeScript 类型系统无法保证顺序和长度。
 
 ## 2. 退而求其次：如何实现类型约束
 
@@ -49,33 +51,37 @@ type What = IsSameType<ArrVersion, InputVersion>;
 const what: What = 1; // 如果ArrVersion和InputVersion不一致，这行代码会报错
 ```
 
-> Note: 这个赋值语句将会在编译期间被打包工具terser消除，因其未使用过。所以无需担心最终结果多出赋值语句。
+> Note: 这个赋值语句将会在编译期间被打包工具terser消除，因其未使用过。所以无需担心最终结果多出赋值语句。 (o゜▽゜)o
 
 ## 4. 实现 `IsSameType` 工具类型
 
 从数学理论讲，关键字`extends`类似于“偏序关系”，因此对于偏序关系而言，只要`a ≤ b`和`b ≤ a`同时成立，那么就可以得到`a = b`。因此，我们以三元运算符来做到这件事，一个直接的想法是这样：
 
 ```typescript
-// 但这不是最优的，最优请见下方的“严谨版本”
-type IsSameType<A, B> = A extends B ? (B extends A ? 1 : 2) : 2;
+// 这是直观版本，但不是最优，最优请见下方的“严谨版本”
+type IsSameTypeIntuitionistic<A, B> = A extends B ? (B extends A ? 1 : 2) : 2;
 ```
 
 > Note: 如果用`true`和`false`，那么此泛型工具会永远返回`boolean`类型从而失去判断能力。
+
+> Note: 不使用`1`和`0`是因为`0`作为falsy的值性质略有区别，可能使得推断结果和约束行为不如预期。
 
 ### 进阶严谨版本
 
 TypeScript 存在“分布式展开”行为，当类型入参存在 `never` 时，分布式展开会直接返回 never，不会进入 `true/never` 分支。以下是社区体操之神提供的严谨版本：
 
 ```typescript
-// 严谨版本
-type IsSameTypeStrict<A, B> =
+// 严谨版本，不得不说体操专家就是厉害(＃°Д°)
+type IsSameType<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 ```
 
-此写法阻止了“分布式展开”行为，适应范围更广。
+此写法阻止了“分布式展开”行为，边界情况都可以照顾到，适用范围更广。
 
 ## 总结
 
 - 元组类型可以转为联合类型，但联合类型无法直接转为元组类型。
 - 可以用联合类型约束数组元素类型，实现基本的类型安全。
 - 进一步约束时，可以用 `IsSameType` 工具类型判断类型集合是否完全一致。
+
+(❁´◡`❁) 感谢你读到这里!
