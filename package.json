@@ -1,0 +1,41 @@
+{
+	"name": "<name>",
+	"version": "0.0.1",
+	"author": {
+		"name": "Kasukabe Tsumugi",
+		"email": "futami16237@gmail.com"
+	},
+	"description": "<name>",
+	"type": "module",
+	"exports": {
+		"import": "./dist/index.mjs",
+		"types": "./dist/index.d.ts",
+		"default": "./dist/index.mjs"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/baendlorel/<name>#readme",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/baendlorel/<name>"
+	},
+	"keywords": [
+		"deep",
+		"clone",
+		"reflect",
+		"property",
+		"path",
+		"object",
+		"nested",
+		"typescript",
+		"javascript"
+	],
+	"scripts": {
+		"test": "clear & vitest",
+		"lint": "oxlint .",
+		"cover": "clear & vitest --coverage",
+		"build": "rimraf dist && node ./plugins/rename.js && rollup -c && node ./plugins/rename.js"
+	},
+	"license": "MIT"
+}
