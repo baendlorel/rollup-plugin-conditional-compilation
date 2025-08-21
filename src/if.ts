@@ -1,17 +1,23 @@
 import * as acorn from 'acorn';
 import type { Plugin } from 'rollup';
 import { Dirv } from './directives.js';
+import { normalize } from './normalizer.js';
+import { ecmaVersion } from 'acorn';
 
 /**
- *
  * @param options options of the plugin
+ *
+ * __PKG_INFO__
+ *
  */
 export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
+  const opts = normalize(options);
+
   return {
     name: '__KEBAB_NAME__',
     transform(code: string, id: string) {
       try {
-        return proceed(code, globals);
+        return proceed(code, opts);
       } catch (error) {
         this.error(
           `__KEBAB_NAME__: error in ${id} - ${error instanceof Error ? error.message : error}`
@@ -26,8 +32,8 @@ export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
  * @param code source coude
  * @param globals global variables
  */
-function proceed(code: string, globals: Record<string, any>): string {
-  const ast = acorn.parse(code, { ecmaVersion: 'latest' });
+function proceed(code: string, opts: __OPTS__): string {
+  const ast = acorn.parse(code, { ecmaVersion: opts.ecmaVersion, sourceType: opts.sourceType });
 }
 
 /**
@@ -37,7 +43,6 @@ function proceed(code: string, globals: Record<string, any>): string {
  * @returns 表达式结果
  */
 function evaluateExpression(expression: string, globals: Record<string, any>): boolean {
-  // 解析表达式为 AST
   let ast: acorn.Node;
   try {
     ast = acorn.parseExpressionAt(expression, 0, { ecmaVersion: 'latest' });
@@ -45,7 +50,6 @@ function evaluateExpression(expression: string, globals: Record<string, any>): b
     throw new Error(`Invalid expression syntax: ${error instanceof Error ? error.message : error}`);
   }
 
-  // 递归评估 AST 节点
   function evaluate(node: acorn.Node): any {
     switch (node.type) {
       case 'Literal':

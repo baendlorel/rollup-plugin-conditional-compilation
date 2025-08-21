@@ -1,4 +1,4 @@
-import { Options as AcornOptions } from 'acorn';
+import { Options as AcornOptions, ecmaVersion } from 'acorn';
 
 const ECMA_VERSIONS = [
   3,
@@ -32,18 +32,36 @@ const ECMA_VERSIONS = [
 
 type What = IsSameType<AcornOptions['ecmaVersion'], (typeof ECMA_VERSIONS)[number]>;
 
-function validEcmaVersion(ecmaVersion: unknown): boolean {
+function validEcmaVersion(ecmaVersion: unknown): ecmaVersion is (typeof ECMA_VERSIONS)[number] {
   const what: What = true;
   return ECMA_VERSIONS.includes(ecmaVersion as (typeof ECMA_VERSIONS)[number]);
 }
 
-function normalize(options: Partial<__OPTS__>): __OPTS__ | string {
+const SOURCE_TYPES = ['script', 'module', undefined] as const;
+function validSourceType(sourceType: unknown): sourceType is (typeof SOURCE_TYPES)[number] {
+  return SOURCE_TYPES.includes(sourceType as (typeof SOURCE_TYPES)[number]);
+}
+
+export function normalize(options: Partial<__OPTS__>): __OPTS__ {
   const o = Object(options);
-  const variables = Object(options.variables);
-  const ecmaVersion = options.ecmaVersion === 'latest' ? 'latest' : Number(options.ecmaVersion);
+  const variables = options.variables;
+  const ecmaVersion = o.ecmaVersion === 'latest' ? 'latest' : Number(o.ecmaVersion);
+  const sourceType = o.sourceType;
+
+  if (typeof variables !== 'object' || variables === null) {
+    throw new TypeError(`__NAME__: Invalid variables: ${variables}, must be an object`);
+  }
 
   if (!validEcmaVersion(ecmaVersion)) {
-    return `Invalid ecmaVersion: ${options.ecmaVersion}`;
+    throw new TypeError(
+      `__NAME__: Invalid ecmaVersion: ${o.ecmaVersion}, must be verions or 'latest'`
+    );
+  }
+
+  if (!validSourceType(sourceType)) {
+    throw new TypeError(
+      `__NAME__: Invalid sourceType: ${sourceType}, must be 'script', 'module' or undefined`
+    );
   }
 
   return {
