@@ -7,6 +7,7 @@
 		"email": "futami16237@gmail.com"
 	},
 	"description": "Conditional Compilation macros like #if #endif in C++.",
+	"description_zh": "和C++类似的条件编译语法，使用#if #endif等指令",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
