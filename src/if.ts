@@ -33,7 +33,14 @@ export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
  * @param globals global variables
  */
 function proceed(code: string, opts: __OPTS__): string {
-  const ast = acorn.parse(code, { ecmaVersion: opts.ecmaVersion, sourceType: opts.sourceType });
+  const ast = acorn.parse(code, {
+    ecmaVersion: opts.ecmaVersion,
+    sourceType: opts.sourceType,
+    onComment(isBlock, text, start, end, startLoc, endLoc) {
+      console.log({ isBlock, text, start, end, startLoc, endLoc });
+    },
+  });
+  return '';
 }
 
 /**
