@@ -42,7 +42,7 @@
 		"test": "clear & vitest",
 		"lint": "oxlint .",
 		"cover": "clear & vitest --coverage",
-		"build": "rimraf dist && node ./plugins/rename.js && rollup -c && node ./plugins/rename.js"
+		"build": "node ./scripts/rollup.mjs"
 	},
 	"license": "MIT",
 	"devDependencies": {

@@ -26,7 +26,7 @@ function printSize(files) {
       total += size;
       info.push({ file, size });
     } catch (e) {
-      console.warn(`${file}: Not found or no permission to read`);
+      console.warn(`${file}: Not found or no permission to read`, e);
     }
   });
 
@@ -62,13 +62,21 @@ class Renamer {
   }
 
   useTempName() {
+    if (this.packageJson.purpose !== 'rollup-plugin') {
+      console.log('Not a rollup plugin. Skip renaming package.json');
+      return;
+    }
     this.origin = this.read();
     const j = JSON.parse(this.origin);
     j.name = 'kasukabe-tsumugi-temporary-name';
-    this.write(JSON.stringify(j));
+    this.write(JSON.stringify(j, null, 2));
   }
 
   restoreRealName() {
+    if (this.packageJson.purpose !== 'rollup-plugin') {
+      console.log('Not a rollup plugin. Skip restoring package.json');
+      return;
+    }
     this.write(this.origin);
   }
 }
@@ -78,22 +86,27 @@ async function run() {
 
   process.env.KSKB_TSUMUGI_REAL_NAME = renamer.realName;
 
-  renamer.useTempName();
+  try {
+    renamer.useTempName();
 
-  await execute(['rimraf', 'dist']);
+    await execute(['rimraf', 'dist']);
 
-  const { name, version, projectType } = renamer.packageJson;
-  console.log(`Building`, `[${projectType}]`, name, version);
+    const { name, version, projectType } = renamer.packageJson;
+    console.log(`Building`, `[${projectType}]`, name, version);
 
-  // ! Must read configs here, or nodejs will not
-  // ! be able to find the installed package of this project
-  const rollupConfig = (await import('../rollup.config.mjs')).default;
+    // ! Must read configs here, or nodejs will not
+    // ! be able to find the installed package of this project
+    const rollupConfig = (await import('../rollup.config.mjs')).default;
 
-  await execute(['rollup', '-c'], { env: { ...process.env } });
+    await execute(['rollup', '-c'], { env: { ...process.env } });
 
-  renamer.restoreRealName();
-  const files = getOutputFiles(rollupConfig);
-  printSize(files);
+    const files = getOutputFiles(rollupConfig);
+    printSize(files);
+  } catch (error) {
+    console.log('error', error);
+  } finally {
+    renamer.restoreRealName();
+  }
 }
 
 run();

@@ -1,60 +1,61 @@
-// 测试入口文件
-import { greet } from './utils.js';
+// Entry file for testing
+import { greet as utilGreet } from './utils.js';
 console.log(greet('World'));
-// 单行注释：变量声明
-let x = 42; // 这是一个数字变量
 
-/* 多行注释：函数声明 */
+/* Single-line comment: variable declaration */
+let x = 42; // This is a number variable
+
+/* Multi-line comment: function declaration */
 function greet(name) {
-  // 函数体注释
+  // Function body comment
   return `Hello, ${name}!`;
 }
 
-// 箭头函数
-const add = (a, b) => a + b; // 求和
+// Arrow function
+const add = (a, b) => a + b; // Sum
 
 /**
- * 多行注释：类声明
- * 包含构造函数和方法
+ * Multi-line comment: class declaration
+ * Includes constructor and methods
  */
 class Person {
   /**
-   * 构造函数
+   * Constructor
    */
   constructor(name, age) {
     this.name = name;
     this.age = age;
   }
 
-  // 方法注释
+  // Method comment
   sayHi() {
     return `Hi, I'm ${this.name}`;
   }
 }
 
-// if 语句
+// if statement
 if (x > 10) {
-  // 条件成立
+  // Condition met
   x--;
 } else {
-  // 条件不成立
+  // Condition not met
   x++;
 }
 
-// for 循环
+// for loop
 for (let i = 0; i < 3; i++) {
-  /* 循环体注释 */
+  /* Loop body comment */
   console.log(i);
 }
 
-// while 循环
+// while loop
 let count = 0;
 while (count < 2) {
-  // 循环注释
+  // Loop comment
   count++;
 }
 
-// switch 语句
+// switch statement
 switch (x) {
   case 41:
     // case 41
@@ -68,17 +69,17 @@ switch (x) {
 try {
   throw new Error('Test error');
 } catch (e) {
-  // 错误处理
+  // Error handling
   console.error(e);
 } finally {
-  // 最终执行
+  // Final execution
 }
 
-// 导出和导入（仅用于语法测试，不实际运行）
+// Export and import (for syntax testing only, not actually running)
 // import { something } from './some-module';
 // export const value = 123;
 
 /*
-  复杂多行注释
-  用于测试插件的注释处理能力
+  Complex multi-line comment
+  Used to test the comment handling capability of the plugin
 */
