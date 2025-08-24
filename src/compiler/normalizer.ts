@@ -1,4 +1,7 @@
-import { ecmaVersion as AcornEcmaVersion } from 'acorn';
+import { Options as AcornOptions } from 'acorn';
+
+type EcmaVersion = AcornOptions['ecmaVersion'];
+type SourceType = AcornOptions['sourceType'];
 
 const ECMA_VERSIONS = [
   3,
@@ -30,23 +33,22 @@ const ECMA_VERSIONS = [
   'latest',
 ] as const;
 
-type What = IsSameType<AcornEcmaVersion, (typeof ECMA_VERSIONS)[number]>;
+const what1: IsSameType<EcmaVersion, (typeof ECMA_VERSIONS)[number]> = true;
 
-function validEcmaVersion(ecmaVersion: unknown): ecmaVersion is (typeof ECMA_VERSIONS)[number] {
-  const what: What = true;
-  return ECMA_VERSIONS.includes(ecmaVersion as (typeof ECMA_VERSIONS)[number]);
+function validEcmaVersion(ecmaVersion: unknown): ecmaVersion is EcmaVersion {
+  return ECMA_VERSIONS.includes(ecmaVersion as EcmaVersion);
 }
 
 const SOURCE_TYPES = ['script', 'module', undefined] as const;
-function validSourceType(sourceType: unknown): sourceType is (typeof SOURCE_TYPES)[number] {
-  return SOURCE_TYPES.includes(sourceType as (typeof SOURCE_TYPES)[number]);
+const what2: IsSameType<SourceType, (typeof SOURCE_TYPES)[number]> = true;
+
+function validSourceType(sourceType: unknown): sourceType is SourceType {
+  return SOURCE_TYPES.includes(sourceType as SourceType);
 }
 
 export function normalize(options?: __OPTS__): __STRICT_OPTS__ | string {
   const o = Object(options) as Required<__OPTS__>;
-  const variables = o.variables;
-  const ecmaVersion = o.ecmaVersion === 'latest' ? 'latest' : Number(o.ecmaVersion);
-  const sourceType = o.sourceType;
+  const { variables = {}, ecmaVersion = 'latest', sourceType = 'module' } = o;
 
   if (typeof variables !== 'object' || variables === null) {
     return `Invalid variables: ${variables}, must be an object`;

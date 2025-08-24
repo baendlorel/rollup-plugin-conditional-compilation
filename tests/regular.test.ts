@@ -10,7 +10,12 @@ const JS = readFileSync(JS_PATH, 'utf-8');
 
 describe('acorn use', () => {
   it('should parse comments', () => {
-    const ctx = mockContext();
+    const ctx = mockContext({
+      variables: {
+        DEBUG: false,
+        FEATURE_GREET: 1,
+      },
+    });
     proceed(ctx, JS);
   });
 });

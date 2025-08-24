@@ -76,7 +76,7 @@ function parse(context: Context, text: string): MinimalDirvBlock | null {
   const expr = text
     .replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
       dirv = $1;
-      console.log('test', `[${$1}]`);
+      console.log('test', `[${text}]`);
       return '';
     })
     .trim();
@@ -89,9 +89,11 @@ function parse(context: Context, text: string): MinimalDirvBlock | null {
     context.this.error(`'${dirv}' should not have any expression, but got: "${expr}"`);
   }
 
+  const condition = dirv === Dirv.If || dirv === Dirv.Elif ? evaluate(context, expr) : null;
+
   return {
     dirv,
-    condition: evaluate(context, expr),
+    condition,
   };
 }
 
@@ -99,6 +101,7 @@ function evaluate(context: Context, expr: string): boolean {
   const v = context.options.variables;
   const fn = new Function(...v.keys, `return (${expr})`);
   const result = fn(...v.values);
+  console.log('evaluating', ...v.keys, `return (${expr})`, Boolean(result));
   return Boolean(result);
 }
 
