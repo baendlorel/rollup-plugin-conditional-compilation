@@ -4,12 +4,6 @@ import { Dirv } from '../consts/directives.js';
 import { normalize } from './normalizer.js';
 
 const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);
-let warn: TransformPluginContext['warn'] = console.warn;
-let error: TransformPluginContext['error'] = (e: unknown) => {
-  throw e;
-};
-
-let opts: __OPTS__ = {} as __OPTS__;
 
 /**
  * @param options options of the plugin
@@ -18,22 +12,23 @@ let opts: __OPTS__ = {} as __OPTS__;
  *
  */
 export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
-  opts = normalize(options);
+  const opts = normalize(options);
 
   return {
     name: '__KEBAB_NAME__',
     transform(this: TransformPluginContext, code: string, id: string) {
-      if (this && typeof this.warn === 'function' && typeof this.error === 'function') {
-        warn = this.warn;
-        error = this.error;
+      if (typeof opts === 'string') {
+        this.error(opts);
       }
 
+      const context: Context = {
+        options: opts,
+        this: this,
+      };
       try {
-        return proceed(code);
+        return proceed(context, code);
       } catch (error) {
-        this.error(
-          `__KEBAB_NAME__: error in ${id} - ${error instanceof Error ? error.message : error}`
-        );
+        this.error(`error in ${id} - ${error instanceof Error ? error.message : error}`);
       }
     },
   };
@@ -44,19 +39,19 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  * @param code source coude
  * @param globals global variables
  */
-export function proceed(code: string, options = opts): string {
+export function proceed(context: Context, code: string): string {
   console.log('proceeding...');
   const indexlessBlocks: IndexlessDirvBlock[] = [];
   acorn.parse(code, {
-    ecmaVersion: options.ecmaVersion,
-    sourceType: options.sourceType,
+    ecmaVersion: context.options.ecmaVersion,
+    sourceType: context.options.sourceType,
     // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
     onComment(isBlock, text, start, end) {
       if (!isBlock) {
         return;
       }
 
-      const minimalDirvBlock = parse(text.trim());
+      const minimalDirvBlock = parse(context, text.trim());
       if (!minimalDirvBlock) {
         return;
       }
@@ -64,7 +59,7 @@ export function proceed(code: string, options = opts): string {
       indexlessBlocks.push(Object.assign({ start, end }, minimalDirvBlock));
     },
   });
-  toIfBlock(indexlessBlocks);
+  toIfBlock(context, indexlessBlocks);
 
   return '';
 }
@@ -75,7 +70,7 @@ export function proceed(code: string, options = opts): string {
  * @returns `null` when the comment is not a `if` macro
  * @throws when the syntax is invalid
  */
-function parse(text: string): MinimalDirvBlock | null {
+function parse(context: Context, text: string): MinimalDirvBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
   let dirv: Dirv | null = null;
   const expr = text
@@ -91,16 +86,17 @@ function parse(text: string): MinimalDirvBlock | null {
   }
 
   if ((dirv === Dirv.Else || dirv === Dirv.Endif) && expr !== '') {
-    error(`'${dirv}' should not have any expression, but got: "${expr}"`);
+    context.this.error(`'${dirv}' should not have any expression, but got: "${expr}"`);
   }
 
   return {
     dirv,
-    condition: evaluate(expr),
+    condition: evaluate(context, expr),
   };
 }
 
-function evaluate(expr: string): boolean {
+function evaluate(context: Context, expr: string): boolean {
+  // todo 完成这里
   return false;
 }
 
@@ -111,7 +107,7 @@ function evaluate(expr: string): boolean {
  * @param indexlessBlocks
  * @throws
  */
-function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
+function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
   // [INFO] the nesting of `if` block is "isomorphic" to a recursive function call
 
   if (indexlessBlocks.length === 0) {
@@ -119,11 +115,11 @@ function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
   }
 
   if (indexlessBlocks.length === 1) {
-    error(`Must have at least 2 directives`);
+    context.this.error(`Must have at least 2 directives`);
   }
 
   if (indexlessBlocks[0].dirv !== Dirv.If) {
-    error(`The first directive must be '${Dirv.If}'`);
+    context.this.error(`The first directive must be '${Dirv.If}'`);
   }
 
   const blocks: DirvBlock[] = [];
@@ -163,13 +159,13 @@ function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
           break;
         case Dirv.Elif:
           if (indexes.else !== -1) {
-            error(`'${Dirv.Elif}' cannot appear after '${Dirv.Else}'`);
+            context.this.error(`'${Dirv.Elif}' cannot appear after '${Dirv.Else}'`);
           }
           b.elifIndex = indexes.elif.push(i) - 1;
           break;
         case Dirv.Else:
           if (indexes.else !== -1) {
-            error(`Multiple '${Dirv.Else}' in the same 'if' block`);
+            context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block`);
           }
           indexes.else = i;
           break;
@@ -180,118 +176,10 @@ function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
     }
 
     // not end with endif
-    error(`'${Dirv.Endif}' is missing`);
+    context.this.error(`'${Dirv.Endif}' is missing`);
   };
 
   iter(0);
 
   return blocks;
-}
-
-/**
- * 安全地评估表达式
- * @param expression 表达式字符串
- * @param globals 全局变量
- * @returns 表达式结果
- */
-function evaluateExpression(expression: string, globals: Record<string, any>): boolean {
-  let ast: acorn.Node;
-  try {
-    ast = acorn.parseExpressionAt(expression, 0, { ecmaVersion: 'latest' });
-  } catch (error) {
-    throw new Error(`Invalid expression syntax: ${error instanceof Error ? error.message : error}`);
-  }
-
-  function evaluate(node: acorn.Node): any {
-    switch (node.type) {
-      case 'Literal':
-        return (node as any).value;
-
-      case 'Identifier':
-        const name = (node as any).name;
-        if (name in globals) {
-          return globals[name];
-        }
-        throw new Error(`Undefined variable: ${name}`);
-
-      case 'BinaryExpression':
-        const binaryNode = node as any;
-        const left = evaluate(binaryNode.left);
-        const right = evaluate(binaryNode.right);
-
-        switch (binaryNode.operator) {
-          case '==':
-            return left == right;
-          case '===':
-            return left === right;
-          case '!=':
-            return left != right;
-          case '!==':
-            return left !== right;
-          case '<':
-            return left < right;
-          case '<=':
-            return left <= right;
-          case '>':
-            return left > right;
-          case '>=':
-            return left >= right;
-          case '&&':
-            return left && right;
-          case '||':
-            return left || right;
-          case '+':
-            return left + right;
-          case '-':
-            return left - right;
-          case '*':
-            return left * right;
-          case '/':
-            return left / right;
-          case '%':
-            return left % right;
-          default:
-            throw new Error(`Unsupported binary operator: ${binaryNode.operator}`);
-        }
-
-      case 'UnaryExpression':
-        const unaryNode = node as any;
-        const operand = evaluate(unaryNode.argument);
-
-        switch (unaryNode.operator) {
-          case '!':
-            return !operand;
-          case '-':
-            return -operand;
-          case '+':
-            return +operand;
-          default:
-            throw new Error(`Unsupported unary operator: ${unaryNode.operator}`);
-        }
-
-      case 'LogicalExpression':
-        const logicalNode = node as any;
-        const leftVal = evaluate(logicalNode.left);
-
-        if (logicalNode.operator === '&&') {
-          return leftVal ? evaluate(logicalNode.right) : leftVal;
-        } else if (logicalNode.operator === '||') {
-          return leftVal ? leftVal : evaluate(logicalNode.right);
-        }
-        throw new Error(`Unsupported logical operator: ${logicalNode.operator}`);
-
-      case 'ConditionalExpression':
-        const condNode = node as any;
-        const test = evaluate(condNode.test);
-        return test ? evaluate(condNode.consequent) : evaluate(condNode.alternate);
-
-      default:
-        throw new Error(`Unsupported expression type: ${node.type}`);
-    }
-  }
-
-  const result = evaluate(ast);
-
-  // 确保返回布尔值
-  return Boolean(result);
 }

@@ -42,26 +42,22 @@ function validSourceType(sourceType: unknown): sourceType is (typeof SOURCE_TYPE
   return SOURCE_TYPES.includes(sourceType as (typeof SOURCE_TYPES)[number]);
 }
 
-export function normalize(options?: Partial<__OPTS__>): __OPTS__ {
+export function normalize(options?: Partial<__OPTS__>): __OPTS__ | string {
   const o = Object(options);
   const variables = o.variables;
   const ecmaVersion = o.ecmaVersion === 'latest' ? 'latest' : Number(o.ecmaVersion);
   const sourceType = o.sourceType;
 
   if (typeof variables !== 'object' || variables === null) {
-    throw new TypeError(`__NAME__: Invalid variables: ${variables}, must be an object`);
+    return `Invalid variables: ${variables}, must be an object`;
   }
 
   if (!validEcmaVersion(ecmaVersion)) {
-    throw new TypeError(
-      `__NAME__: Invalid ecmaVersion: ${o.ecmaVersion}, must be verions or 'latest'`
-    );
+    return `Invalid ecmaVersion: ${o.ecmaVersion}, must be verions or 'latest'`;
   }
 
   if (!validSourceType(sourceType)) {
-    throw new TypeError(
-      `__NAME__: Invalid sourceType: ${sourceType}, must be 'script', 'module' or undefined`
-    );
+    return `Invalid sourceType: ${sourceType}, must be 'script', 'module' or undefined`;
   }
 
   return {
