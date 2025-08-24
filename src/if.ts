@@ -46,7 +46,7 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  */
 export function proceed(code: string, options = opts): string {
   console.log('proceeding...');
-  const indexlessBlocks: IndexlessIfBlock[] = [];
+  const indexlessBlocks: IndexlessDirvBlock[] = [];
   acorn.parse(code, {
     ecmaVersion: options.ecmaVersion,
     sourceType: options.sourceType,
@@ -62,6 +62,8 @@ export function proceed(code: string, options = opts): string {
       }
 
       indexlessBlocks.push(Object.assign({ start, end }, parsed));
+      fillIfBlockIndexes(indexlessBlocks);
+      const blocks = indexlessBlocks;
     },
   });
 
@@ -74,7 +76,7 @@ export function proceed(code: string, options = opts): string {
  * @returns `null` when the comment is not a `if` macro
  * @throws when the syntax is invalid
  */
-function parse(text: string): MinimalIfBlock | null {
+function parse(text: string): MinimalDirvBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
   let dirv: Dirv | null = null;
   const expr = text
@@ -111,8 +113,8 @@ function evaluate(expr: string): boolean {
  * @throws
  */
 function fillIfBlockIndexes(
-  indexlessBlocks: IndexlessIfBlock[]
-): asserts indexlessBlocks is IfBlock[] {
+  indexlessBlocks: IndexlessDirvBlock[]
+): asserts indexlessBlocks is DirvBlock[] {
   // [INFO] the nesting of `if` block is "isomorphic" to a recursive function call
   if (indexlessBlocks.length === 0) {
     return;
@@ -126,15 +128,14 @@ function fillIfBlockIndexes(
     error(`The first directive must be '${Dirv.If}'`);
   }
 
+  const blocks: DirvBlock[] = indexlessBlocks.map((ib) => ({
+    ...ib,
+    indexes: { if: -1, elif: [], else: -1, endif: -1 },
+  }));
+
   // & now we have at least 2 directives, and the first one is '#if'
   const iter = (startIndex: number): void => {
-    const indexes: IfBlockIndexes = {
-      if: startIndex,
-      elif: [],
-      else: -1,
-      endif: -1,
-    };
-    (indexlessBlocks[startIndex] as IfBlock).indexes = indexes;
+    const indexes: IfBlockIndexes = blocks[startIndex].indexes;
 
     let hasElse = false;
     for (let i = startIndex + 1; i < indexlessBlocks.length; i++) {

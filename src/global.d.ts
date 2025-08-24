@@ -12,9 +12,7 @@ declare global {
     sourceType: AcornOptions['sourceType'];
   }
 
-  interface IfBlock {
-    dirv: Dirv;
-
+  interface Block {
     /**
      * Condition expression
      * - `boolean` when `dirv` is 'if' or 'elif'
@@ -25,11 +23,6 @@ declare global {
     start: number;
 
     end: number;
-
-    /**
-     * Stores indexes in `blocks[]` with directives as keys
-     */
-    indexes: IfBlockIndexes;
   }
 
   interface IfBlockIndexes {
@@ -39,6 +32,27 @@ declare global {
     endif: number;
   }
 
-  type IndexlessIfBlock = Omit<IfBlock, 'indexes'>;
-  type MinimalIfBlock = Omit<IndexlessIfBlock, 'start' | 'end'>;
+  /**
+   * Only directive `#if` has `indexes` property
+   */
+  type DirvBlock =
+    | (Block & {
+        dirv: Dirv.If;
+
+        /**
+         * Stores indexes in `blocks[]` with directives as keys
+         */
+        indexes: IfBlockIndexes;
+      })
+    | (Block & {
+        dirv: Dirv.Elif | Dirv.Else | Dirv.Endif;
+
+        /**
+         * the index in `blocks[]` of `#if`
+         */
+        ifIndex: number;
+      });
+
+  type IndexlessDirvBlock = Block & { dirv: Dirv };
+  type MinimalDirvBlock = Omit<IndexlessDirvBlock, 'start' | 'end'>;
 }
