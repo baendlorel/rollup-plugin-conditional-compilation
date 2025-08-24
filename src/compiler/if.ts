@@ -96,8 +96,9 @@ function parse(context: Context, text: string): MinimalDirvBlock | null {
 }
 
 function evaluate(context: Context, expr: string): boolean {
-  // todo 完成这里
-  return false;
+  const v = context.options.variables;
+  const fn = new Function(...v.keys, `return (${expr})`);
+  return fn(...v.values);
 }
 
 /**

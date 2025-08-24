@@ -42,8 +42,8 @@ function validSourceType(sourceType: unknown): sourceType is (typeof SOURCE_TYPE
   return SOURCE_TYPES.includes(sourceType as (typeof SOURCE_TYPES)[number]);
 }
 
-export function normalize(options?: Partial<__OPTS__>): __OPTS__ | string {
-  const o = Object(options);
+export function normalize(options?: __OPTS__): __STRICT_OPTS__ | string {
+  const o = Object(options) as Required<__OPTS__>;
   const variables = o.variables;
   const ecmaVersion = o.ecmaVersion === 'latest' ? 'latest' : Number(o.ecmaVersion);
   const sourceType = o.sourceType;
@@ -61,7 +61,7 @@ export function normalize(options?: Partial<__OPTS__>): __OPTS__ | string {
   }
 
   return {
-    variables,
+    variables: { keys: Object.keys(variables), values: Object.values(variables) },
     ecmaVersion,
     sourceType,
   };

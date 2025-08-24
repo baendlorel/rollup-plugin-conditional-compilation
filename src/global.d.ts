@@ -9,11 +9,17 @@ declare global {
 
   interface Context {
     this: TransformPluginContext;
-    options: __OPTS__;
+    options: __STRICT_OPTS__;
   }
 
   interface __OPTS__ {
-    variables: Record<string, any>;
+    variables?: Record<string, unknown>;
+    ecmaVersion?: AcornOptions['ecmaVersion'];
+    sourceType?: AcornOptions['sourceType'];
+  }
+
+  interface __STRICT_OPTS__ {
+    variables: { keys: string[]; values: unknown[] };
     ecmaVersion: AcornOptions['ecmaVersion'];
     sourceType: AcornOptions['sourceType'];
   }
