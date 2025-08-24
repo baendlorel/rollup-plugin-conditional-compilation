@@ -19,7 +19,7 @@ declare global {
      * Stores indexes in `blocks[]` with directives as keys
      * - in the same `if` group, everyone shares the same `indexes` object
      */
-    indexes: IfBlockIndexes;
+    indexes: DirvBlockIndexes;
 
     /**
      * if `dirv` is `Dirv.Elif`, `indexes.elif[elifIndex]` is itself
@@ -45,7 +45,7 @@ declare global {
     end: number;
   }
 
-  interface IfBlockIndexes {
+  interface DirvBlockIndexes {
     if: number;
     elif: number[];
     else: number;

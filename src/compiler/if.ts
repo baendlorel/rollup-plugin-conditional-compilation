@@ -56,16 +56,15 @@ export function proceed(code: string, options = opts): string {
         return;
       }
 
-      const parsed = parse(text.trim());
-      if (!parsed) {
+      const minimalDirvBlock = parse(text.trim());
+      if (!minimalDirvBlock) {
         return;
       }
 
-      indexlessBlocks.push(Object.assign({ start, end }, parsed));
-      fillIfBlockIndexes(indexlessBlocks);
-      const blocks = indexlessBlocks;
+      indexlessBlocks.push(Object.assign({ start, end }, minimalDirvBlock));
     },
   });
+  toIfBlock(indexlessBlocks);
 
   return '';
 }
@@ -112,12 +111,11 @@ function evaluate(expr: string): boolean {
  * @param indexlessBlocks
  * @throws
  */
-function fillIfBlockIndexes(
-  indexlessBlocks: IndexlessDirvBlock[]
-): asserts indexlessBlocks is DirvBlock[] {
+function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
   // [INFO] the nesting of `if` block is "isomorphic" to a recursive function call
+
   if (indexlessBlocks.length === 0) {
-    return;
+    return [];
   }
 
   if (indexlessBlocks.length === 1) {
@@ -128,18 +126,20 @@ function fillIfBlockIndexes(
     error(`The first directive must be '${Dirv.If}'`);
   }
 
-  const blocks: DirvBlock[] = indexlessBlocks.map((ib) => ({
-    ...ib,
-    indexes: { if: -1, elif: [], else: -1, endif: -1 },
-  }));
+  const blocks: DirvBlock[] = [];
 
   // & now we have at least 2 directives, and the first one is '#if'
   const iter = (startIndex: number): void => {
-    const indexes: IfBlockIndexes = blocks[startIndex].indexes;
+    const indexes: DirvBlockIndexes = blocks[startIndex].indexes;
 
     let hasElse = false;
     for (let i = startIndex + 1; i < indexlessBlocks.length; i++) {
-      const b = indexlessBlocks[i];
+      const indexData: Pick<DirvBlock, 'indexes' | 'elifIndex'> = {
+        indexes,
+        elifIndex: -1,
+      };
+      const b: DirvBlock = Object.assign(indexData, indexlessBlocks[i]);
+
       switch (b.dirv) {
         case Dirv.If:
           iter(i);
