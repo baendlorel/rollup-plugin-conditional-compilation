@@ -12,7 +12,21 @@ declare global {
     sourceType: AcornOptions['sourceType'];
   }
 
-  interface Block {
+  interface DirvBlock {
+    dirv: Dirv;
+
+    /**
+     * Stores indexes in `blocks[]` with directives as keys
+     * - in the same `if` group, everyone shares the same `indexes` object
+     */
+    indexes: IfBlockIndexes;
+
+    /**
+     * if `dirv` is `Dirv.Elif`, `indexes.elif[elifIndex]` is itself
+     * - other directives, it will be `-1`
+     */
+    elifIndex: number;
+
     /**
      * Condition expression
      * - `boolean` when `dirv` is 'if' or 'elif'
@@ -20,8 +34,14 @@ declare global {
      */
     condition: boolean | null;
 
+    /**
+     * Comes from the hook `onComment` in  `acorn.parse`
+     */
     start: number;
 
+    /**
+     * Comes from the hook `onComment` in  `acorn.parse`
+     */
     end: number;
   }
 
@@ -32,27 +52,6 @@ declare global {
     endif: number;
   }
 
-  /**
-   * Only directive `#if` has `indexes` property
-   */
-  type DirvBlock =
-    | (Block & {
-        dirv: Dirv.If;
-
-        /**
-         * Stores indexes in `blocks[]` with directives as keys
-         */
-        indexes: IfBlockIndexes;
-      })
-    | (Block & {
-        dirv: Dirv.Elif | Dirv.Else | Dirv.Endif;
-
-        /**
-         * the index in `blocks[]` of `#if`
-         */
-        ifIndex: number;
-      });
-
-  type IndexlessDirvBlock = Block & { dirv: Dirv };
+  type IndexlessDirvBlock = Omit<DirvBlock, 'indexes' | 'elifIndex'>;
   type MinimalDirvBlock = Omit<IndexlessDirvBlock, 'start' | 'end'>;
 }
