@@ -120,7 +120,9 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
   }
 
   if (indexlessBlocks.length === 1) {
-    context.this.error(`Must have at least 2 directives`);
+    context.this.error(
+      `Must have at least 2 directives, got orphaned '${indexlessBlocks[0].dirv}'`
+    );
   }
 
   if (indexlessBlocks[0].dirv !== Dirv.If) {

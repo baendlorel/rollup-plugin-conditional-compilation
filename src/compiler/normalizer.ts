@@ -47,19 +47,23 @@ function validSourceType(sourceType: unknown): sourceType is SourceType {
 }
 
 export function normalize(options?: __OPTS__): __STRICT_OPTS__ | string {
+  if (options !== undefined && (typeof options !== 'object' || options === null)) {
+    return `Invalid options: '${options}', must be an object`;
+  }
+
   const o = Object(options) as Required<__OPTS__>;
   const { variables = {}, ecmaVersion = 'latest', sourceType = 'module' } = o;
 
   if (typeof variables !== 'object' || variables === null) {
-    return `Invalid variables: ${variables}, must be an object`;
+    return `Invalid variables: '${variables}', must be an object`;
   }
 
   if (!validEcmaVersion(ecmaVersion)) {
-    return `Invalid ecmaVersion: ${o.ecmaVersion}, must be verions or 'latest'`;
+    return `Invalid ecmaVersion: '${ecmaVersion}', must be one of [${ECMA_VERSIONS.join(', ')}]`;
   }
 
   if (!validSourceType(sourceType)) {
-    return `Invalid sourceType: ${sourceType}, must be 'script', 'module' or undefined`;
+    return `Invalid sourceType: '${sourceType}', must be 'script', 'module' or undefined`;
   }
 
   return {

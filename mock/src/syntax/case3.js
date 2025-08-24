@@ -5,7 +5,7 @@ const errorCase3 = {};
 console.log('Initial condition');
 /* #else */
 console.log('Else block');
-/* #elif SOME_CONDITION */ // ERROR: elif after else
+/* #elif CONDITION */ // ERROR: elif after else
 console.log('This elif should cause error');
 /* #endif */
 
