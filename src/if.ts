@@ -3,7 +3,7 @@ import type { Plugin, TransformPluginContext } from 'rollup';
 import { Dirv } from './directives.js';
 import { normalize } from './normalizer.js';
 
-const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Eles}|${Dirv.Elif}|${Dirv.Endif})\\s*`);
+const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Eles}|${Dirv.Elif}|${Dirv.Endif})\\b`);
 let warn: TransformPluginContext['warn'] = console.warn;
 let error: TransformPluginContext['error'] = (e: unknown) => {
   throw e;
@@ -45,11 +45,11 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  * @param globals global variables
  */
 export function proceed(code: string, options = opts): string {
-  console.log('proceeding...' + code.slice(0, 250) + '\n');
+  console.log('proceeding...');
   const blocks: IfMacroBlock[] = [];
   acorn.parse(code, {
-    ecmaVersion: opts.ecmaVersion,
-    sourceType: opts.sourceType,
+    ecmaVersion: options.ecmaVersion,
+    sourceType: options.sourceType,
     // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
     onComment(isBlock, text, start, end) {
       if (!isBlock) {
@@ -66,6 +66,7 @@ export function proceed(code: string, options = opts): string {
       blocks.push(parsed);
     },
   });
+
   return '';
 }
 
@@ -76,17 +77,20 @@ export function proceed(code: string, options = opts): string {
  * @throws when the syntax is invalid
  */
 function parse(text: string): Omit<IfMacroBlock, 'start' | 'end'> | null {
+  text = text.replace(/(^|\n)[*\s]+/g, '');
   let type: Dirv | null = null;
-  const expr = text.replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
-    type = $1;
-    return '';
-  });
+  const expr = text
+    .replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
+      type = $1;
+      console.log('test', `[${$1}]`);
+      return '';
+    })
+    .trim();
+
   if (type === null) {
     return null;
   }
 
-  // & Since the text is trimmed and directives is replaced with /\s*/
-  // & `expr` is no need to be trimmed again
   if ((type === Dirv.Eles || type === Dirv.Endif) && expr !== '') {
     error(`${type} should not have any expression, but got: "${expr}"`);
   }
@@ -97,7 +101,9 @@ function parse(text: string): Omit<IfMacroBlock, 'start' | 'end'> | null {
   };
 }
 
-function evaluate(expr: string): boolean {}
+function evaluate(expr: string): boolean {
+  return false;
+}
 
 /**
  * 安全地评估表达式
