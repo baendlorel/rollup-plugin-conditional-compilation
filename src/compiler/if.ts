@@ -128,33 +128,49 @@ function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
 
   const blocks: DirvBlock[] = [];
 
+  /**
+   * Create a full version of `DirvBlock` from `IndexlessDirvBlock` and push it to `blocks[]`
+   * @param index index in `indexlessBlocks[]`
+   * @param indexes shares the same `indexes` object in the same `if` group
+   * @returns the pushed block data object
+   */
+  const push = (index: number, indexes: DirvBlockIndexes): DirvBlock => {
+    const indexData: Pick<DirvBlock, 'indexes' | 'elifIndex'> = {
+      indexes,
+      elifIndex: -1,
+    };
+    const b: DirvBlock = Object.assign(indexData, indexlessBlocks[index]);
+    blocks.push(b);
+    return b;
+  };
+
   // & now we have at least 2 directives, and the first one is '#if'
   const iter = (startIndex: number): void => {
-    const indexes: DirvBlockIndexes = blocks[startIndex].indexes;
+    const indexes: DirvBlockIndexes = {
+      if: startIndex,
+      elif: [],
+      else: -1,
+      endif: -1,
+    };
+    push(startIndex, indexes);
 
-    let hasElse = false;
     for (let i = startIndex + 1; i < indexlessBlocks.length; i++) {
-      const indexData: Pick<DirvBlock, 'indexes' | 'elifIndex'> = {
-        indexes,
-        elifIndex: -1,
-      };
-      const b: DirvBlock = Object.assign(indexData, indexlessBlocks[i]);
+      const b = push(i, indexes);
 
       switch (b.dirv) {
         case Dirv.If:
           iter(i);
           break;
         case Dirv.Elif:
-          if (hasElse) {
+          if (indexes.else !== -1) {
             error(`'${Dirv.Elif}' cannot appear after '${Dirv.Else}'`);
           }
-          indexes.elif.push(i);
+          b.elifIndex = indexes.elif.push(i) - 1;
           break;
         case Dirv.Else:
-          if (hasElse) {
+          if (indexes.else !== -1) {
             error(`Multiple '${Dirv.Else}' in the same 'if' block`);
           }
-          hasElse = true;
           indexes.else = i;
           break;
         case Dirv.Endif:
@@ -168,6 +184,8 @@ function toIfBlock(indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
   };
 
   iter(0);
+
+  return blocks;
 }
 
 /**
