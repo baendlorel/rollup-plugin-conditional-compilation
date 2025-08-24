@@ -1,10 +1,14 @@
-export const enum Dirv {
+export const enum DirvMeta {
   PREFIX = '/**',
   SUFFIX = '*/',
 
+  Regex = '^(#if|#else|#elif|#endif)\\s*',
+}
+
+export const enum Dirv {
   // Basic directives, act like they are in C++
-  IF = '#if',
-  ELSE = '#else',
-  ELIF = '#elif',
-  ENDIF = '#endif',
+  If = '#if',
+  Eles = '#else',
+  Elif = '#elif',
+  Endif = '#endif',
 }

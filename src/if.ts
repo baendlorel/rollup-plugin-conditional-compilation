@@ -1,8 +1,15 @@
 import * as acorn from 'acorn';
-import type { Plugin } from 'rollup';
-import { Dirv } from './directives.js';
+import type { Plugin, TransformPluginContext } from 'rollup';
+import { DirvMeta, Dirv } from './directives.js';
 import { normalize } from './normalizer.js';
-import { ecmaVersion } from 'acorn';
+
+const IF_MACRO_REGEX = new RegExp(`^${DirvMeta.Regex}`);
+let warn: TransformPluginContext['warn'] = console.warn;
+let error: TransformPluginContext['error'] = (e: unknown) => {
+  throw e;
+};
+
+let opts: __OPTS__ = {} as __OPTS__;
 
 /**
  * @param options options of the plugin
@@ -10,14 +17,19 @@ import { ecmaVersion } from 'acorn';
  * __PKG_INFO__
  *
  */
-export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
-  const opts = normalize(options);
+export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
+  opts = normalize(options);
 
   return {
     name: '__KEBAB_NAME__',
-    transform(code: string, id: string) {
+    transform(this: TransformPluginContext, code: string, id: string) {
+      if (this && typeof this.warn === 'function' && typeof this.error === 'function') {
+        warn = this.warn;
+        error = this.error;
+      }
+
       try {
-        return proceed(code, opts);
+        return proceed(code);
       } catch (error) {
         this.error(
           `__KEBAB_NAME__: error in ${id} - ${error instanceof Error ? error.message : error}`
@@ -32,17 +44,60 @@ export function conditionalCompilation(options: Partial<__OPTS__>): Plugin {
  * @param code source coude
  * @param globals global variables
  */
-function proceed(code: string, opts: __OPTS__): string {
+export function proceed(code: string, options = opts): string {
   console.log('proceeding...' + code.slice(0, 250) + '\n');
+  const blocks: IfMacroBlock[] = [];
   acorn.parse(code, {
     ecmaVersion: opts.ecmaVersion,
     sourceType: opts.sourceType,
-    onComment(isBlock, text, start, end, startLoc, endLoc) {
-      console.log({ isBlock, text, start, end, startLoc, endLoc });
+    // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
+    onComment(isBlock, text, start, end) {
+      if (!isBlock) {
+        return;
+      }
+
+      const parsed = parse(text.trim()) as IfMacroBlock | null;
+      if (!parsed) {
+        return;
+      }
+
+      parsed.start = start;
+      parsed.end = end;
+      blocks.push(parsed);
     },
   });
   return '';
 }
+
+/**
+ * Parse the comment to a `IfMacroBlock`
+ * @param text trimmed comment text
+ * @returns `null` when the comment is not a `if` macro
+ * @throws when the syntax is invalid
+ */
+function parse(text: string): Omit<IfMacroBlock, 'start' | 'end'> | null {
+  let type: Dirv | null = null;
+  const expr = text.replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
+    type = $1;
+    return '';
+  });
+  if (type === null) {
+    return null;
+  }
+
+  // & Since the text is trimmed and directives is replaced with /\s*/
+  // & `expr` is no need to be trimmed again
+  if ((type === Dirv.Eles || type === Dirv.Endif) && expr !== '') {
+    error(`${type} should not have any expression, but got: "${expr}"`);
+  }
+
+  return {
+    type,
+    condition: evaluate(expr),
+  };
+}
+
+function evaluate(expr: string): boolean {}
 
 /**
  * 安全地评估表达式

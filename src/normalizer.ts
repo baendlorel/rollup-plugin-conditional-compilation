@@ -42,9 +42,9 @@ function validSourceType(sourceType: unknown): sourceType is (typeof SOURCE_TYPE
   return SOURCE_TYPES.includes(sourceType as (typeof SOURCE_TYPES)[number]);
 }
 
-export function normalize(options: Partial<__OPTS__>): __OPTS__ {
+export function normalize(options?: Partial<__OPTS__>): __OPTS__ {
   const o = Object(options);
-  const variables = options.variables;
+  const variables = o.variables;
   const ecmaVersion = o.ecmaVersion === 'latest' ? 'latest' : Number(o.ecmaVersion);
   const sourceType = o.sourceType;
 
