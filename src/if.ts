@@ -1,9 +1,9 @@
 import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
-import { DirvMeta, Dirv } from './directives.js';
+import { Dirv } from './directives.js';
 import { normalize } from './normalizer.js';
 
-const IF_MACRO_REGEX = new RegExp(`^${DirvMeta.Regex}`);
+const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Eles}|${Dirv.Elif}|${Dirv.Endif})\\s*`);
 let warn: TransformPluginContext['warn'] = console.warn;
 let error: TransformPluginContext['error'] = (e: unknown) => {
   throw e;
