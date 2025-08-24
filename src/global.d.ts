@@ -12,12 +12,12 @@ declare global {
     sourceType: AcornOptions['sourceType'];
   }
 
-  interface IfMacroBlock {
-    type: Dirv;
+  interface IfBlock {
+    dirv: Dirv;
 
     /**
      * Condition expression
-     * - `boolean` when `type` is 'if' or 'elif'
+     * - `boolean` when `dirv` is 'if' or 'elif'
      * - other directive types have `null`
      */
     condition: boolean | null;
@@ -25,5 +25,20 @@ declare global {
     start: number;
 
     end: number;
+
+    /**
+     * Stores indexes in `blocks[]` with directives as keys
+     */
+    indexes: IfBlockIndexes;
   }
+
+  interface IfBlockIndexes {
+    if: number;
+    elif: number[];
+    else: number;
+    endif: number;
+  }
+
+  type IndexlessIfBlock = Omit<IfBlock, 'indexes'>;
+  type MinimalIfBlock = Omit<IndexlessIfBlock, 'start' | 'end'>;
 }

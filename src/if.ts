@@ -3,7 +3,7 @@ import type { Plugin, TransformPluginContext } from 'rollup';
 import { Dirv } from './directives.js';
 import { normalize } from './normalizer.js';
 
-const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Eles}|${Dirv.Elif}|${Dirv.Endif})\\b`);
+const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);
 let warn: TransformPluginContext['warn'] = console.warn;
 let error: TransformPluginContext['error'] = (e: unknown) => {
   throw e;
@@ -46,7 +46,7 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  */
 export function proceed(code: string, options = opts): string {
   console.log('proceeding...');
-  const blocks: IfMacroBlock[] = [];
+  const indexlessBlocks: IndexlessIfBlock[] = [];
   acorn.parse(code, {
     ecmaVersion: options.ecmaVersion,
     sourceType: options.sourceType,
@@ -56,14 +56,12 @@ export function proceed(code: string, options = opts): string {
         return;
       }
 
-      const parsed = parse(text.trim()) as IfMacroBlock | null;
+      const parsed = parse(text.trim());
       if (!parsed) {
         return;
       }
 
-      parsed.start = start;
-      parsed.end = end;
-      blocks.push(parsed);
+      indexlessBlocks.push(Object.assign({ start, end }, parsed));
     },
   });
 
@@ -76,33 +74,99 @@ export function proceed(code: string, options = opts): string {
  * @returns `null` when the comment is not a `if` macro
  * @throws when the syntax is invalid
  */
-function parse(text: string): Omit<IfMacroBlock, 'start' | 'end'> | null {
+function parse(text: string): MinimalIfBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
-  let type: Dirv | null = null;
+  let dirv: Dirv | null = null;
   const expr = text
     .replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
-      type = $1;
+      dirv = $1;
       console.log('test', `[${$1}]`);
       return '';
     })
     .trim();
 
-  if (type === null) {
+  if (dirv === null) {
     return null;
   }
 
-  if ((type === Dirv.Eles || type === Dirv.Endif) && expr !== '') {
-    error(`${type} should not have any expression, but got: "${expr}"`);
+  if ((dirv === Dirv.Else || dirv === Dirv.Endif) && expr !== '') {
+    error(`'${dirv}' should not have any expression, but got: "${expr}"`);
   }
 
   return {
-    type,
+    dirv,
     condition: evaluate(expr),
   };
 }
 
 function evaluate(expr: string): boolean {
   return false;
+}
+
+/**
+ * Check whether the normal `if` syntax is correct and add `indexes` to each `IfBlock`
+ *
+ * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
+ * @param indexlessBlocks
+ * @throws
+ */
+function fillIfBlockIndexes(
+  indexlessBlocks: IndexlessIfBlock[]
+): asserts indexlessBlocks is IfBlock[] {
+  // [INFO] the nesting of `if` block is "isomorphic" to a recursive function call
+  if (indexlessBlocks.length === 0) {
+    return;
+  }
+
+  if (indexlessBlocks.length === 1) {
+    error(`Must have at least 2 directives`);
+  }
+
+  if (indexlessBlocks[0].dirv !== Dirv.If) {
+    error(`The first directive must be '${Dirv.If}'`);
+  }
+
+  // & now we have at least 2 directives, and the first one is '#if'
+  const iter = (startIndex: number): void => {
+    const indexes: IfBlockIndexes = {
+      if: startIndex,
+      elif: [],
+      else: -1,
+      endif: -1,
+    };
+    (indexlessBlocks[startIndex] as IfBlock).indexes = indexes;
+
+    let hasElse = false;
+    for (let i = startIndex + 1; i < indexlessBlocks.length; i++) {
+      const b = indexlessBlocks[i];
+      switch (b.dirv) {
+        case Dirv.If:
+          iter(i);
+          break;
+        case Dirv.Elif:
+          if (hasElse) {
+            error(`'${Dirv.Elif}' cannot appear after '${Dirv.Else}'`);
+          }
+          indexes.elif.push(i);
+          break;
+        case Dirv.Else:
+          if (hasElse) {
+            error(`Multiple '${Dirv.Else}' in the same 'if' block`);
+          }
+          hasElse = true;
+          indexes.else = i;
+          break;
+        case Dirv.Endif:
+          indexes.endif = i;
+          return; // closed with endif, if the syntax is correct, checker should return here
+      }
+    }
+
+    // not end with endif
+    error(`'${Dirv.Endif}' is missing`);
+  };
+
+  iter(0);
 }
 
 /**
