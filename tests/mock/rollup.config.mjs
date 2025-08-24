@@ -1,4 +1,4 @@
-import conditionalCompilation from '../dist/index.mjs';
+import conditionalCompilation from '../../dist/index.mjs';
 
 export default {
   input: './src/index.js',

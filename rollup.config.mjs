@@ -76,7 +76,7 @@ const options = [
         },
         compress: {
           reduce_vars: true,
-          drop_console: true,
+          // drop_console: true,
           dead_code: true, // ✅ Safe: remove dead code
           evaluate: true, // ✅ Safe: evaluate constant expressions
         },
