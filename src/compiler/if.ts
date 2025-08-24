@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
-import { Dirv } from './directives.js';
+import { Dirv } from '../consts/directives.js';
 import { normalize } from './normalizer.js';
 
 const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, describe, it } from 'vitest';
 
-import { proceed } from '@/if.js';
+import { proceed } from '@/compiler/if.js';
 
 const JS_PATH = join(import.meta.dirname, '..', 'mock', 'src', 'sample.js');
 const JS = readFileSync(JS_PATH, 'utf-8');

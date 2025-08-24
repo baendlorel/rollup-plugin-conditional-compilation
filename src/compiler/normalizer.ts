@@ -1,4 +1,4 @@
-import { Options as AcornOptions, ecmaVersion } from 'acorn';
+import { ecmaVersion as AcornEcmaVersion } from 'acorn';
 
 const ECMA_VERSIONS = [
   3,
@@ -30,7 +30,7 @@ const ECMA_VERSIONS = [
   'latest',
 ] as const;
 
-type What = IsSameType<AcornOptions['ecmaVersion'], (typeof ECMA_VERSIONS)[number]>;
+type What = IsSameType<AcornEcmaVersion, (typeof ECMA_VERSIONS)[number]>;
 
 function validEcmaVersion(ecmaVersion: unknown): ecmaVersion is (typeof ECMA_VERSIONS)[number] {
   const what: What = true;
