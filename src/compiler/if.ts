@@ -174,7 +174,9 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
         context.this.error(`Unmatched '${Dirv.Endif}', directive index: ${i}`);
       }
 
+      hasElse = false;
       currentIfBlock.endif = dirvBlock;
+
       stack.pop();
       currentIfBlock = stack.length > 0 ? stack[stack.length - 1] : null;
       continue;
