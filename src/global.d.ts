@@ -70,4 +70,27 @@ declare global {
 
     endif: DirvBlock<Dirv.Endif>;
   }
+
+  /**
+   * Equal to `this.end + 1`
+   */
+  // codeStart: number;
+
+  /**
+   * Equal to `next.start - 1`
+   */
+  // codeEnd: number;
+  interface IfChainConditionNode {
+    condition: boolean;
+    next: IfChainNode;
+    children: IfChainNode[];
+    start: number;
+    end: number;
+  }
+  interface IfChainCloseNode {
+    start: number;
+    end: number;
+  }
+
+  type IfChainNode = IfChainConditionNode | IfChainCloseNode;
 }

@@ -64,11 +64,11 @@ export function proceed(context: Context): string {
     },
   });
 
-  const ifBlocks = toIfNodes(context, dirvBlocks);
+  const ifNodes = toIfNodes(context, dirvBlocks);
 
-  console.log(ifBlocks.length, ifBlocks);
-
-  return apply(context, ifBlocks);
+  console.log('ifNodes.length', ifNodes.length);
+  console.dir(ifNodes, { depth: 6 });
+  return apply(context, ifNodes);
 }
 
 /**
@@ -154,6 +154,7 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
 
   let current: IfNode | null = null;
   let hasElse = false;
+  let children: IfNode[] | null = null;
 
   const createIfNode = (dirvBlock: DirvBlock<Dirv.If>): IfNode => ({
     parent: stack.length === 0 ? null : stack[stack.length - 1],
@@ -173,8 +174,11 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
     const dirvBlock = dirvBlocks[i];
     if (isIf(dirvBlock)) {
       current = createIfNode(dirvBlock);
+      children = dirvBlock.children;
       if (current.parent === null) {
         ifNodes.push(current);
+      } else {
+        // todo 加入到父级别的blocks对应的children里
       }
       stack.push(current);
       continue;
@@ -191,6 +195,7 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
       }
 
       hasElse = false;
+      children = null;
       current.endif = dirvBlock;
 
       stack.pop();
@@ -204,6 +209,7 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
       }
 
       hasElse = true;
+      children = dirvBlock.children;
       current.blocks.push(fromElseToGeneric(dirvBlock));
       continue;
     }
@@ -214,6 +220,7 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
           `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
         );
       }
+      children = dirvBlock.children;
       current.blocks.push(dirvBlock);
       continue;
     }
