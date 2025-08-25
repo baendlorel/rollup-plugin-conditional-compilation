@@ -19,15 +19,6 @@ function isEndif(block: DirvBlock): block is DirvBlock<Dirv.Endif> {
   return block.dirv === Dirv.Endif;
 }
 
-function fromElseToGeneric(block: DirvBlock<Dirv.Else>): GenericBlock {
-  return {
-    condition: true,
-    children: block.children,
-    start: block.start,
-    end: block.end,
-  };
-}
-
 /**
  * Parse the comment to a `IfMacroBlock`
  * @param context Composed thisArg and plugin options
@@ -58,7 +49,6 @@ export function toBaseDirvBlock(context: Context, text: string): BaseDirvBlock |
   return {
     dirv,
     condition,
-    children: [],
   };
 }
 
@@ -167,9 +157,99 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   return ifNodes;
 }
 
-export function toIfChainConditionNodes(
-  context: Context,
-  dirvBlocks: DirvBlock[]
-): IfChainConditionNode[] {
-  return [];
+export function toIfChainConditionNodes(context: Context, dirvBlocks: DirvBlock[]): IfChainNode[] {
+  if (dirvBlocks.length === 0) {
+    return [];
+  } else if (dirvBlocks.length === 1) {
+    context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
+  }
+
+  const attach = (start: IfChainNode, next: IfChainNode) => {
+    let last: IfChainNode = start;
+    while (last.next !== undefined) {
+      last = last.next;
+    }
+    last.next = next;
+  };
+
+  const nodes: IfChainNode[] = [];
+  const hasElse = new Set<IfChainNode>();
+  const stack: IfChainNode[] = [];
+
+  for (let i = 0; i < dirvBlocks.length; i++) {
+    const b = dirvBlocks[i];
+
+    // next level
+    if (isIf(b)) {
+      const child: IfChainNode = {
+        condition: b.condition,
+        start: b.start,
+        end: b.end,
+      };
+      const children = stack[stack.length - 1].children;
+      if (children) {
+        children.push(child);
+      } else {
+        stack[stack.length - 1].children = [child];
+      }
+
+      stack.push(child);
+
+      // only push root node
+      if (stack.length === 1) {
+        nodes.push(child);
+      }
+      continue;
+    }
+
+    if (stack.length === 0) {
+      context.this.error(`Unexpected '${b.dirv}', directive index: ${i}`);
+    }
+
+    const current = stack[stack.length - 1];
+    if (isEndif(b)) {
+      attach(current, {
+        start: b.start,
+        end: b.end,
+      });
+      stack.pop();
+      continue;
+    }
+
+    // lateral
+    if (isElse(b)) {
+      if (hasElse.has(current)) {
+        context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block, directive index: ${i}`);
+      }
+      hasElse.add(current);
+      attach(current, {
+        condition: true,
+        start: b.start,
+        end: b.end,
+      });
+      continue;
+    }
+
+    if (isElif(b)) {
+      if (hasElse.has(current)) {
+        context.this.error(
+          `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
+        );
+      }
+      attach(current, {
+        condition: b.condition,
+        start: b.start,
+        end: b.end,
+      });
+      continue;
+    }
+  }
+
+  hasElse.clear();
+
+  if (stack.length !== 0) {
+    context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
+  }
+
+  return nodes;
 }

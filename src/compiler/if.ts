@@ -57,7 +57,7 @@ export function proceed(context: Context): string {
         return;
       }
 
-      dirvBlocks.push(Object.assign({ start, end }, baseDirvBlock));
+      dirvBlocks.push(Object.assign({ start, end, children: [] }, baseDirvBlock));
     },
   });
 
@@ -96,4 +96,5 @@ function apply(context: Context, ifBlocks: IfNode[]): string {
   //   if (b.if.condition) {
   //   }
   // }
+  return '';
 }

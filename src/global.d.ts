@@ -36,8 +36,6 @@ declare global {
      */
     condition: D extends Dirv.Endif | Dirv.Else ? null : boolean;
 
-    children: D extends Dirv.Endif ? null : IfNode[];
-
     /**
      * Comes from the hook `onComment` in  `acorn.parse`
      */
@@ -80,17 +78,15 @@ declare global {
    * Equal to `next.start - 1`
    */
   // codeEnd: number;
-  interface IfChainConditionNode {
-    condition: boolean;
-    next: IfChainNode;
-    children: IfChainNode[];
-    start: number;
-    end: number;
-  }
-  interface IfChainCloseNode {
-    start: number;
-    end: number;
-  }
+  interface IfChainNode {
+    condition?: boolean;
 
-  type IfChainNode = IfChainConditionNode | IfChainCloseNode;
+    next?: IfChainNode;
+
+    children?: IfChainNode[];
+
+    start: number;
+
+    end: number;
+  }
 }
