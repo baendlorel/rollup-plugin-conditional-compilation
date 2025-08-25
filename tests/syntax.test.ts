@@ -90,7 +90,6 @@ describe('syntax error', () => {
   });
 
   it('Case 12: if block with only endif', () => {
-    // todo let there be a warning of empty block
     expect(() => proceed(ctx, read('case12.js')));
   });
 

@@ -1,7 +1,7 @@
 import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
 import { normalize } from './normalizer.js';
-import { toBaseDirvBlock, toIfNodes } from './block.js';
+import { toBaseDirvBlockOrNull, toIfNodes } from './block.js';
 
 /**
  * @param options options of the plugin
@@ -52,7 +52,7 @@ export function proceed(context: Context): string {
         return;
       }
 
-      const baseDirvBlock = toBaseDirvBlock(context, text.trim());
+      const baseDirvBlock = toBaseDirvBlockOrNull(context, text.trim());
       if (!baseDirvBlock) {
         return;
       }

@@ -49,26 +49,6 @@ declare global {
 
   type BaseDirvBlock = Omit<DirvBlock, 'start' | 'end'>;
 
-  interface GenericBlock {
-    condition: boolean;
-    children: IfNode[];
-    start: number;
-    end: number;
-  }
-
-  interface IfNode {
-    parent: IfNode | null;
-
-    /**
-     * [NOTE] We can merge the same logic together because:
-     * - when applying, `#if` uses the same logic as `#elif` (both check the condition to include or not)
-     * - `#else` is equivalent to `#elif true`
-     */
-    blocks: GenericBlock[];
-
-    endif: DirvBlock<Dirv.Endif>;
-  }
-
   /**
    * Equal to `this.end + 1`
    */
@@ -78,12 +58,17 @@ declare global {
    * Equal to `next.start - 1`
    */
   // codeEnd: number;
-  interface IfChainNode {
+  interface IfNode {
+    /**
+     * [NOTE] We can merge the same logic together because:
+     * - when applying, `#if` uses the same logic as `#elif` (both check the condition to include or not)
+     * - `#else` is equivalent to `#elif true`
+     */
     condition?: boolean;
 
-    next?: IfChainNode;
+    next?: IfNode;
 
-    children?: IfChainNode[];
+    children?: IfNode[];
 
     start: number;
 
