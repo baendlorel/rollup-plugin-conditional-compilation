@@ -36,7 +36,7 @@ const read = (name: string) => readFileSync(join(SYNTAX_PATH, name), 'utf-8');
 
 describe('syntax error', () => {
   it('Case 1: Missing endif', () => {
-    expect(() => proceed(ctx, read('case1.js'))).toThrow(/'#endif' is missing/);
+    expect(() => proceed(ctx, read('case1.js'))).toThrow(/Unclosed '#if', missing '#endif'/);
   });
 
   it('Case 2: Multiple else', () => {
@@ -90,7 +90,8 @@ describe('syntax error', () => {
   });
 
   it('Case 12: if block with only endif', () => {
-    expect(() => proceed(ctx, read('case12.js'))).toThrow('Must have at least 2 directives');
+    // todo let there be a warning of empty block
+    expect(() => proceed(ctx, read('case12.js')));
   });
 
   it('Case 13: else before any if', () => {

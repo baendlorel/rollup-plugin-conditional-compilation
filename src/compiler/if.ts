@@ -76,7 +76,6 @@ function parse(context: Context, text: string): MinimalDirvBlock | null {
   const expr = text
     .replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
       dirv = $1;
-      console.log('test', `[${text}]`);
       return '';
     })
     .trim();
