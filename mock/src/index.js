@@ -1,5 +1,4 @@
 // Entry file for testing
-import { greet as utilGreet } from './utils.js';
 console.log(greet('World'));
 
 /* Single-line comment: variable declaration */
