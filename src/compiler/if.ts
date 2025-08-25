@@ -2,6 +2,7 @@ import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
 import { Dirv } from '../consts/directives.js';
 import { normalize } from './normalizer.js';
+import { fromElseToElif, isElif, isElse, isEndif, isIf } from './block.js';
 
 const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);
 
@@ -123,12 +124,13 @@ function toBaseDirvBlock(context: Context, text: string): BaseDirvBlock | null {
 
 /**
  * Check whether the normal `if` syntax is correct and add `indexes` to each `IfBlock`
+ * - [NOTE] will convert `else` to `elif true`, more convenient for later processing
  *
  * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
  * @param context Composed thisArg and plugin options
  * @param dirvBlocks created by `toBaseDirvBlock`
  */
-function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
+function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   if (dirvBlocks.length === 0) {
     return [];
   }
@@ -137,59 +139,64 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
     context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
   }
 
-  const createIfBlock = (dirvBlock: DirvBlock<Dirv.If>): IfBlock => ({
+  const createIfBlock = (dirvBlock: DirvBlock<Dirv.If>): IfNode => ({
     if: dirvBlock,
     elif: [],
-    else: null,
     endif: null as any, // will be assigned later
   });
 
-  const ifBlocks: IfBlock[] = [];
+  const ifBlocks: IfNode[] = [];
 
   /**
    * Only stores blocks of `Dirv.If`, and when they are closed, they will be poped.
    */
-  const stack: IfBlock[] = [];
+  const stack: IfNode[] = [];
+
+  let currentIfBlock: IfNode | null = null;
+  let hasElse = false;
 
   for (let i = 0; i < dirvBlocks.length; i++) {
     const dirvBlock = dirvBlocks[i];
-    if (dirvBlock.dirv === Dirv.If) {
-      const b = createIfBlock(dirvBlock as DirvBlock<Dirv.If>);
-      ifBlocks.push(b);
-      stack.push(b);
+    if (isIf(dirvBlock)) {
+      currentIfBlock = createIfBlock(dirvBlock);
+      ifBlocks.push(currentIfBlock);
+      stack.push(currentIfBlock);
       continue;
-    } else if (stack.length === 0) {
+    } else if (currentIfBlock === null) {
+      // & this is equivalent to `stack.length === 0`
       context.this.error(
         `Orphaned '${dirvBlock.dirv}', must be preceded by '${Dirv.If}', directive index: ${i}`
       );
     }
 
-    const currentIfBlock = stack[stack.length - 1];
-    if (dirvBlock.dirv === Dirv.Endif) {
-      currentIfBlock.endif = dirvBlock as DirvBlock<Dirv.Endif>;
-      if (stack.length > 0) {
-        stack.pop();
-      } else {
+    if (isEndif(dirvBlock)) {
+      currentIfBlock.endif = dirvBlock;
+
+      if (stack.length === 0) {
         context.this.error(`Unmatched '${Dirv.Endif}', directive index: ${i}`);
       }
+
+      currentIfBlock = stack.pop() as IfNode;
       continue;
     }
 
-    if (dirvBlock.dirv === Dirv.Else) {
-      if (currentIfBlock.else !== null) {
+    if (isElse(dirvBlock)) {
+      if (hasElse) {
         context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block, directive index: ${i}`);
       }
-      currentIfBlock.else = dirvBlock as DirvBlock<Dirv.Else>;
+
+      hasElse = true;
+      currentIfBlock.elif.push(fromElseToElif(dirvBlock));
       continue;
     }
 
-    if (dirvBlock.dirv === Dirv.Elif) {
-      if (currentIfBlock.else !== null) {
+    if (isElif(dirvBlock)) {
+      if (hasElse) {
         context.this.error(
           `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
         );
       }
-      currentIfBlock.elif.push(dirvBlock as DirvBlock<Dirv.Elif>);
+      currentIfBlock.elif.push(dirvBlock);
       continue;
     }
   }
@@ -207,4 +214,27 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
  * @param context Composed thisArg and plugin options
  * @param ifBlocks
  */
-function apply(context: Context, code: string, ifBlocks: IfBlock[]): string {}
+function apply(context: Context, code: string, ifBlocks: IfNode[]): string {
+  const codeBlocks: string[] = [];
+  const _apply = (ifBlock: IfNode) => {
+    if (ifBlock.if.condition) {
+      if (ifBlock.if.children.length === 0) {
+        codeBlocks.push(code.slice(ifBlock.if.end + 1, ifBlock.endif.end));
+      } else {
+        ifBlock.if.children.forEach(_apply);
+      }
+      return;
+    }
+    for (let i = 0; i < ifBlock.elif.length; i++) {
+      const elif = ifBlock.elif[i];
+      if (elif.condition) {
+      }
+    }
+  };
+
+  for (let i = 0; i < ifBlocks.length; i++) {
+    const b = ifBlocks[i];
+    if (b.if.condition) {
+    }
+  }
+}

@@ -34,6 +34,8 @@ declare global {
      */
     condition: D extends Dirv.Endif | Dirv.Else ? null : boolean;
 
+    children: D extends Dirv.Endif ? null : IfNode[];
+
     /**
      * Comes from the hook `onComment` in  `acorn.parse`
      */
@@ -43,16 +45,17 @@ declare global {
      * Comes from the hook `onComment` in  `acorn.parse`
      */
     end: number;
-
-    children: D extends Dirv.Endif ? null : IfBlock[];
   }
 
   type BaseDirvBlock = Omit<DirvBlock, 'start' | 'end'>;
 
-  interface IfBlock {
+  interface IfNode {
     if: DirvBlock<Dirv.If>;
+
+    /**
+     * [NOTE] `#else` is equivalent to `#elif true`, so `#else` is stored here too
+     */
     elif: DirvBlock<Dirv.Elif>[];
-    else: DirvBlock<Dirv.Else> | null;
     endif: DirvBlock<Dirv.Endif>;
   }
 }
