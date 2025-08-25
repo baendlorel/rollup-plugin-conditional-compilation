@@ -16,16 +16,6 @@ describe('acorn use', () => {
         FEATURE_GREET: 1,
       },
     });
-    proceed(ctx, JS);
-  });
-
-  it('should throw syntax error', () => {
-    const ctx = mockContext({
-      variables: {
-        DEBUG: false,
-        FEATURE_GREET: 1,
-      },
-    });
-    proceed(ctx, JS);
+    expect(proceed(ctx, JS)).toBeTypeOf('string');
   });
 });

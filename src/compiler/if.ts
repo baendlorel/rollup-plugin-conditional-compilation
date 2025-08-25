@@ -59,7 +59,10 @@ export function proceed(context: Context, code: string): string {
       indexlessBlocks.push(Object.assign({ start, end }, minimalDirvBlock));
     },
   });
-  toIfBlock(context, indexlessBlocks);
+
+  const blocks = toIfBlock(context, indexlessBlocks);
+
+  console.log(blocks.map((b) => `${b.dirv}: ${b.start} -> ${b.end}`).join('\n'));
 
   return '';
 }
@@ -100,10 +103,10 @@ function evaluate(context: Context, expr: string): boolean {
   const v = context.options.variables;
   const fn = new Function(...v.keys, `return (${expr})`);
   const result = fn(...v.values);
-  console.log('evaluating', `(${expr})`, Boolean(result));
   return Boolean(result);
 }
 
+// todo 应该把一组if的内容融入一个叫IfBlock的对象里
 /**
  * Check whether the normal `if` syntax is correct and add `indexes` to each `IfBlock`
  *
@@ -124,10 +127,6 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
     );
   }
 
-  if (indexlessBlocks[0].dirv !== Dirv.If) {
-    context.this.error(`The first directive must be '${Dirv.If}'`);
-  }
-
   const createIfBlock = (i: number): DirvBlock =>
     Object.assign(
       {
@@ -142,12 +141,12 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
       indexlessBlocks[i]
     );
 
-  const blocks: DirvBlock[] = [createIfBlock(0)];
+  const blocks: DirvBlock[] = [];
 
   /**
    * Only stores blocks of `Dirv.If`, and when they are closed, they will be poped.
    */
-  const stack: DirvBlock[] = [blocks[0]];
+  const stack: DirvBlock[] = [];
 
   const createOtherBlock = (i: number): DirvBlock =>
     Object.assign(
@@ -158,16 +157,20 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
       indexlessBlocks[i]
     );
 
-  for (let i = 1; i < indexlessBlocks.length; i++) {
-    const currentIndexes = stack[stack.length - 1].indexes;
+  for (let i = 0; i < indexlessBlocks.length; i++) {
     const ib = indexlessBlocks[i];
     if (ib.dirv === Dirv.If) {
       const b = createIfBlock(i);
       blocks.push(b);
       stack.push(b);
       continue;
+    } else if (stack.length === 0) {
+      context.this.error(
+        `Orphaned '${ib.dirv}', must be preceded by '${Dirv.If}', directive index: ${i}`
+      );
     }
 
+    const currentIndexes = stack[stack.length - 1].indexes;
     const b = createOtherBlock(i);
     if (ib.dirv === Dirv.Endif) {
       currentIndexes.endif = i;
@@ -208,3 +211,5 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
   console.log(blocks.map((b) => b.dirv));
   return blocks;
 }
+
+function warnEmptyBlocks(context: Context, blocks: DirvBlock[]) {}
