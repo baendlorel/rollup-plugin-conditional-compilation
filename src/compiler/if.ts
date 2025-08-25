@@ -101,7 +101,7 @@ function evaluate(context: Context, expr: string): boolean {
   const v = context.options.variables;
   const fn = new Function(...v.keys, `return (${expr})`);
   const result = fn(...v.values);
-  console.log('evaluating', ...v.keys, `return (${expr})`, Boolean(result));
+  console.log('evaluating', `(${expr})`, Boolean(result));
   return Boolean(result);
 }
 
@@ -129,64 +129,83 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
     context.this.error(`The first directive must be '${Dirv.If}'`);
   }
 
-  const blocks: DirvBlock[] = [];
+  const createIfBlock = (i: number): DirvBlock =>
+    Object.assign(
+      {
+        indexes: {
+          if: i,
+          elif: [],
+          else: -1,
+          endif: -1,
+        },
+        elifIndex: -1,
+      },
+      indexlessBlocks[i]
+    );
+
+  const blocks: DirvBlock[] = [createIfBlock(0)];
 
   /**
-   * Create a full version of `DirvBlock` from `IndexlessDirvBlock` and push it to `blocks[]`
-   * @param index index in `indexlessBlocks[]`
-   * @param indexes shares the same `indexes` object in the same `if` group
-   * @returns the pushed block data object
+   * Only stores blocks of `Dirv.If`, and when they are closed, they will be poped.
    */
-  const push = (index: number, indexes: DirvBlockIndexes): DirvBlock => {
-    const indexData: Pick<DirvBlock, 'indexes' | 'elifIndex'> = {
-      indexes,
-      elifIndex: -1,
-    };
-    const b: DirvBlock = Object.assign(indexData, indexlessBlocks[index]);
-    blocks.push(b);
-    return b;
-  };
+  const stack: DirvBlock[] = [blocks[0]];
 
-  // & now we have at least 2 directives, and the first one is '#if'
-  const iter = (startIndex: number): void => {
-    const indexes: DirvBlockIndexes = {
-      if: startIndex,
-      elif: [],
-      else: -1,
-      endif: -1,
-    };
-    push(startIndex, indexes);
+  const createOtherBlock = (i: number): DirvBlock =>
+    Object.assign(
+      {
+        indexes: stack[stack.length - 1].indexes,
+        elifIndex: -1,
+      },
+      indexlessBlocks[i]
+    );
 
-    for (let i = startIndex + 1; i < indexlessBlocks.length; i++) {
-      const b = push(i, indexes);
-
-      switch (b.dirv) {
-        case Dirv.If:
-          iter(i);
-          break;
-        case Dirv.Elif:
-          if (indexes.else !== -1) {
-            context.this.error(`'${Dirv.Elif}' cannot appear after '${Dirv.Else}'`);
-          }
-          b.elifIndex = indexes.elif.push(i) - 1;
-          break;
-        case Dirv.Else:
-          if (indexes.else !== -1) {
-            context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block`);
-          }
-          indexes.else = i;
-          break;
-        case Dirv.Endif:
-          indexes.endif = i;
-          return; // closed with endif, if the syntax is correct, checker should return here
-      }
+  for (let i = 1; i < indexlessBlocks.length; i++) {
+    const currentIndexes = stack[stack.length - 1].indexes;
+    const ib = indexlessBlocks[i];
+    if (ib.dirv === Dirv.If) {
+      const b = createIfBlock(i);
+      blocks.push(b);
+      stack.push(b);
+      continue;
     }
 
-    // not end with endif
-    context.this.error(`'${Dirv.Endif}' is missing`);
-  };
+    const b = createOtherBlock(i);
+    if (ib.dirv === Dirv.Endif) {
+      currentIndexes.endif = i;
+      blocks.push(b);
+      if (stack.length > 0) {
+        stack.pop();
+      } else {
+        context.this.error(`Unmatched '${Dirv.Endif}', directive index: ${i}`);
+      }
+      continue;
+    }
 
-  iter(0);
+    if (ib.dirv === Dirv.Else) {
+      if (currentIndexes.else !== -1) {
+        context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block, directive index: ${i}`);
+      }
+      currentIndexes.else = i;
+      blocks.push(b);
+      continue;
+    }
 
+    if (ib.dirv === Dirv.Elif) {
+      if (currentIndexes.else !== -1) {
+        context.this.error(
+          `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
+        );
+      }
+      b.elifIndex = currentIndexes.elif.push(i) - 1;
+      blocks.push(b);
+      continue;
+    }
+  }
+
+  if (stack.length !== 0) {
+    context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
+  }
+
+  console.log(blocks.map((b) => b.dirv));
   return blocks;
 }

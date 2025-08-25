@@ -36,49 +36,49 @@ const read = (name: string) => readFileSync(join(SYNTAX_PATH, name), 'utf-8');
 
 describe('syntax error', () => {
   it('Case 1: Missing endif', () => {
-    expect(() => proceed(ctx, read('case1.js'))).toThrow(`'#endif' is missing`);
+    expect(() => proceed(ctx, read('case1.js'))).toThrow(/'#endif' is missing/);
   });
 
   it('Case 2: Multiple else', () => {
-    expect(() => proceed(ctx, read('case2.js'))).toThrow(`Multiple '#else' in the same 'if'`);
+    expect(() => proceed(ctx, read('case2.js'))).toThrow(/Multiple '#else' in the same 'if'/);
   });
 
   it('Case 3: elif after else', () => {
-    expect(() => proceed(ctx, read('case3.js'))).toThrow(`'#elif' cannot appear after '#else'`);
+    expect(() => proceed(ctx, read('case3.js'))).toThrow(/'#elif' cannot appear after '#else'/);
   });
 
   it('Case 4: Orphaned endif', () => {
     expect(() => proceed(ctx, read('case4.js'))).toThrow(
-      `Must have at least 2 directives, got orphaned '#endif'`
+      /Must have at least 2 directives, got orphaned '#endif'/
     );
   });
 
   it('Case 5: Orphaned else', () => {
     expect(() => proceed(ctx, read('case5.js'))).toThrow(
-      `Must have at least 2 directives, got orphaned '#else'`
+      /Must have at least 2 directives, got orphaned '#else'/
     );
   });
 
   it('Case 6: Orphaned elif', () => {
     expect(() => proceed(ctx, read('case6.js'))).toThrow(
-      `Must have at least 2 directives, got orphaned '#elif'`
+      /Must have at least 2 directives, got orphaned '#elif'/
     );
   });
 
   it('Case 7: else with expression', () => {
     expect(() => proceed(ctx, read('case7.js'))).toThrow(
-      `'#else' should not have any expression, but got: "INVALID_EXPRESSION"`
+      /'#else' should not have any expression, but got: "INVALID_EXPRESSION"/
     );
   });
 
   it('Case 8: endif with expression', () => {
     expect(() => proceed(ctx, read('case8.js'))).toThrow(
-      `'#endif' should not have any expression, but got: "INVALID_EXPRESSION"`
+      /'#endif' should not have any expression, but got: "INVALID_EXPRESSION"/
     );
   });
 
   it('Case 9: Nested if block missing endif', () => {
-    expect(() => proceed(ctx, read('case9.js'))).toThrow("'#endif' is missing");
+    expect(() => proceed(ctx, read('case9.js'))).toThrow(/Unclosed '#if', missing '#endif'/);
   });
 
   it('Case 10: elif after else (with expression)', () => {
