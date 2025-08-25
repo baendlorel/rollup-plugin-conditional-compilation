@@ -41,7 +41,7 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  */
 export function proceed(context: Context, code: string): string {
   console.log('proceeding...');
-  const indexlessBlocks: IndexlessDirvBlock[] = [];
+  const dirvBlocks: DirvBlock[] = [];
   acorn.parse(code, {
     ecmaVersion: context.options.ecmaVersion,
     sourceType: context.options.sourceType,
@@ -51,18 +51,18 @@ export function proceed(context: Context, code: string): string {
         return;
       }
 
-      const minimalDirvBlock = parse(context, text.trim());
-      if (!minimalDirvBlock) {
+      const baseDirvBlock = toBaseDirvBlock(context, text.trim());
+      if (!baseDirvBlock) {
         return;
       }
 
-      indexlessBlocks.push(Object.assign({ start, end }, minimalDirvBlock));
+      dirvBlocks.push(Object.assign({ start, end }, baseDirvBlock));
     },
   });
 
-  const blocks = toIfBlock(context, indexlessBlocks);
+  const ifBlocks = toIfBlocks(context, dirvBlocks);
 
-  console.log(blocks.map((b) => `${b.dirv}: ${b.start} -> ${b.end}`).join('\n'));
+  console.log(ifBlocks);
 
   return '';
 }
@@ -73,7 +73,7 @@ export function proceed(context: Context, code: string): string {
  * @returns `null` when the comment is not a `if` macro
  * @throws when the syntax is invalid
  */
-function parse(context: Context, text: string): MinimalDirvBlock | null {
+function toBaseDirvBlock(context: Context, text: string): BaseDirvBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
   let dirv: Dirv | null = null;
   const expr = text
@@ -96,6 +96,7 @@ function parse(context: Context, text: string): MinimalDirvBlock | null {
   return {
     dirv,
     condition,
+    children: [],
   };
 }
 
@@ -111,70 +112,48 @@ function evaluate(context: Context, expr: string): boolean {
  * Check whether the normal `if` syntax is correct and add `indexes` to each `IfBlock`
  *
  * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
- * @param indexlessBlocks
+ * @param dirvBlocks
  * @throws
  */
-function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): DirvBlock[] {
-  // [INFO] the nesting of `if` block is "isomorphic" to a recursive function call
-
-  if (indexlessBlocks.length === 0) {
+function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
+  if (dirvBlocks.length === 0) {
     return [];
   }
 
-  if (indexlessBlocks.length === 1) {
-    context.this.error(
-      `Must have at least 2 directives, got orphaned '${indexlessBlocks[0].dirv}'`
-    );
+  if (dirvBlocks.length === 1) {
+    context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
   }
 
-  const createIfBlock = (i: number): DirvBlock =>
-    Object.assign(
-      {
-        indexes: {
-          if: i,
-          elif: [],
-          else: -1,
-          endif: -1,
-        },
-        elifIndex: -1,
-      },
-      indexlessBlocks[i]
-    );
+  const createIfBlock = (dirvBlock: DirvBlock<Dirv.If>): IfBlock => ({
+    if: dirvBlock,
+    elif: [],
+    else: null,
+    endif: null as any, // will be assigned later
+  });
 
-  const blocks: DirvBlock[] = [];
+  const ifBlocks: IfBlock[] = [];
 
   /**
    * Only stores blocks of `Dirv.If`, and when they are closed, they will be poped.
    */
-  const stack: DirvBlock[] = [];
+  const stack: IfBlock[] = [];
 
-  const createOtherBlock = (i: number): DirvBlock =>
-    Object.assign(
-      {
-        indexes: stack[stack.length - 1].indexes,
-        elifIndex: -1,
-      },
-      indexlessBlocks[i]
-    );
-
-  for (let i = 0; i < indexlessBlocks.length; i++) {
-    const ib = indexlessBlocks[i];
-    if (ib.dirv === Dirv.If) {
-      const b = createIfBlock(i);
-      blocks.push(b);
+  for (let i = 0; i < dirvBlocks.length; i++) {
+    const dirvBlock = dirvBlocks[i];
+    if (dirvBlock.dirv === Dirv.If) {
+      const b = createIfBlock(dirvBlock as DirvBlock<Dirv.If>);
+      ifBlocks.push(b);
       stack.push(b);
       continue;
     } else if (stack.length === 0) {
       context.this.error(
-        `Orphaned '${ib.dirv}', must be preceded by '${Dirv.If}', directive index: ${i}`
+        `Orphaned '${dirvBlock.dirv}', must be preceded by '${Dirv.If}', directive index: ${i}`
       );
     }
 
-    const currentIndexes = stack[stack.length - 1].indexes;
-    const b = createOtherBlock(i);
-    if (ib.dirv === Dirv.Endif) {
-      currentIndexes.endif = i;
-      blocks.push(b);
+    const currentIfBlock = stack[stack.length - 1];
+    if (dirvBlock.dirv === Dirv.Endif) {
+      currentIfBlock.endif = dirvBlock as DirvBlock<Dirv.Endif>;
       if (stack.length > 0) {
         stack.pop();
       } else {
@@ -183,23 +162,21 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
       continue;
     }
 
-    if (ib.dirv === Dirv.Else) {
-      if (currentIndexes.else !== -1) {
+    if (dirvBlock.dirv === Dirv.Else) {
+      if (currentIfBlock.else !== null) {
         context.this.error(`Multiple '${Dirv.Else}' in the same 'if' block, directive index: ${i}`);
       }
-      currentIndexes.else = i;
-      blocks.push(b);
+      currentIfBlock.else = dirvBlock as DirvBlock<Dirv.Else>;
       continue;
     }
 
-    if (ib.dirv === Dirv.Elif) {
-      if (currentIndexes.else !== -1) {
+    if (dirvBlock.dirv === Dirv.Elif) {
+      if (currentIfBlock.else !== null) {
         context.this.error(
           `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
         );
       }
-      b.elifIndex = currentIndexes.elif.push(i) - 1;
-      blocks.push(b);
+      currentIfBlock.elif.push(dirvBlock as DirvBlock<Dirv.Elif>);
       continue;
     }
   }
@@ -208,8 +185,7 @@ function toIfBlock(context: Context, indexlessBlocks: IndexlessDirvBlock[]): Dir
     context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
   }
 
-  console.log(blocks.map((b) => b.dirv));
-  return blocks;
+  return ifBlocks;
 }
 
 function warnEmptyBlocks(context: Context, blocks: DirvBlock[]) {}
