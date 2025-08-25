@@ -49,13 +49,23 @@ declare global {
 
   type BaseDirvBlock = Omit<DirvBlock, 'start' | 'end'>;
 
+  interface GenericBlock {
+    condition: boolean;
+    children: IfNode[];
+    start: number;
+    end: number;
+  }
+
   interface IfNode {
-    if: DirvBlock<Dirv.If>;
+    parent: IfNode | null;
 
     /**
-     * [NOTE] `#else` is equivalent to `#elif true`, so `#else` is stored here too
+     * [NOTE] We can merge the same logic together because:
+     * - when applying, `#if` uses the same logic as `#elif` (both check the condition to include or not)
+     * - `#else` is equivalent to `#elif true`
      */
-    elif: DirvBlock<Dirv.Elif>[];
+    blocks: GenericBlock[];
+
     endif: DirvBlock<Dirv.Endif>;
   }
 }

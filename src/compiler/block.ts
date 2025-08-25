@@ -16,10 +16,11 @@ export function isEndif(block: DirvBlock): block is DirvBlock<Dirv.Endif> {
   return block.dirv === Dirv.Endif;
 }
 
-export function fromElseToElif(block: DirvBlock<Dirv.Else>): DirvBlock<Dirv.Elif> {
+export function fromElseToGeneric(block: DirvBlock<Dirv.Else>): GenericBlock {
   return {
-    ...block,
-    dirv: Dirv.Elif,
     condition: true,
+    children: block.children,
+    start: block.start,
+    end: block.end,
   };
 }

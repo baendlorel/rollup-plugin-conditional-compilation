@@ -2,7 +2,7 @@ import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
 import { Dirv } from '../consts/directives.js';
 import { normalize } from './normalizer.js';
-import { fromElseToElif, isElif, isElse, isEndif, isIf } from './block.js';
+import { fromElseToGeneric, isElif, isElse, isEndif, isIf } from './block.js';
 
 const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);
 
@@ -84,8 +84,14 @@ export function proceed(context: Context, code: string): string {
 function evaluate(context: Context, expr: string): boolean {
   const v = context.options.variables;
   const fn = new Function(...v.keys, `return (${expr})`);
-  const result = fn(...v.values);
-  return Boolean(result);
+  try {
+    const result = fn(...v.values);
+    return Boolean(result);
+  } catch (e) {
+    context.this.error(
+      `Invalid expression: "${expr}" with error ${e instanceof Error ? e.message : e}`
+    );
+  }
 }
 
 /**
@@ -139,30 +145,41 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
     context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
   }
 
-  const createIfBlock = (dirvBlock: DirvBlock<Dirv.If>): IfNode => ({
-    if: dirvBlock,
-    elif: [],
+  const createIfNode = (dirvBlock: DirvBlock<Dirv.If>, parent: IfNode | null): IfNode => ({
+    parent,
+    blocks: [
+      {
+        condition: dirvBlock.condition,
+        children: dirvBlock.children,
+        start: dirvBlock.start,
+        end: dirvBlock.end,
+      },
+    ],
     endif: null as any, // will be assigned later
   });
 
-  const ifBlocks: IfNode[] = [];
+  const ifNodes: IfNode[] = [];
 
   /**
    * Only stores blocks of `Dirv.If`, and when they are closed, they will be poped.
    */
   const stack: IfNode[] = [];
 
-  let currentIfBlock: IfNode | null = null;
+  let current: IfNode | null = null;
   let hasElse = false;
 
+  // todo 可以用weakmap来保存 blocks数组里每一项对应的index
   for (let i = 0; i < dirvBlocks.length; i++) {
     const dirvBlock = dirvBlocks[i];
     if (isIf(dirvBlock)) {
-      currentIfBlock = createIfBlock(dirvBlock);
-      ifBlocks.push(currentIfBlock);
-      stack.push(currentIfBlock);
+      const isTopBlock = parent === null;
+      current = createIfNode(dirvBlock, parent);
+      if (isTopBlock) {
+        ifNodes.push(current);
+      }
+      stack.push(current);
       continue;
-    } else if (currentIfBlock === null) {
+    } else if (current === null) {
       // & this is equivalent to `stack.length === 0`
       context.this.error(
         `Orphaned '${dirvBlock.dirv}', must be preceded by '${Dirv.If}', directive index: ${i}`
@@ -175,10 +192,10 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
       }
 
       hasElse = false;
-      currentIfBlock.endif = dirvBlock;
+      current.endif = dirvBlock;
 
       stack.pop();
-      currentIfBlock = stack.length > 0 ? stack[stack.length - 1] : null;
+      current = stack.length > 0 ? stack[stack.length - 1] : null;
       continue;
     }
 
@@ -188,7 +205,7 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
       }
 
       hasElse = true;
-      currentIfBlock.elif.push(fromElseToElif(dirvBlock));
+      current.blocks.push(fromElseToGeneric(dirvBlock));
       continue;
     }
 
@@ -198,7 +215,7 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
           `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
         );
       }
-      currentIfBlock.elif.push(dirvBlock);
+      current.blocks.push(dirvBlock);
       continue;
     }
   }
@@ -207,7 +224,7 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
     context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
   }
 
-  return ifBlocks;
+  return ifNodes;
 }
 
 /**
@@ -221,7 +238,7 @@ function apply(context: Context, code: string, ifBlocks: IfNode[]): string {
   const _apply = (ifBlock: IfNode) => {
     if (ifBlock.if.condition) {
       if (ifBlock.if.children.length === 0) {
-        codeBlocks.push(code.slice(ifBlock.if.end + 1, ifBlock.endif.end));
+        codeBlocks.push(code.slice(ifBlock.if.end + 1, 下一个块.start));
       } else {
         ifBlock.if.children.forEach(_apply);
       }
