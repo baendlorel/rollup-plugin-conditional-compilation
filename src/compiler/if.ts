@@ -36,8 +36,8 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
 
 /**
  * Analyzing code with acorn
+ * @param context Composed thisArg and plugin options
  * @param code source coude
- * @param globals global variables
  */
 export function proceed(context: Context, code: string): string {
   console.log('proceeding...');
@@ -47,6 +47,7 @@ export function proceed(context: Context, code: string): string {
     sourceType: context.options.sourceType,
     // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
     onComment(isBlock, text, start, end) {
+      // & Only allows block comments like `/* #if ... */`, `// #if` is ignored
       if (!isBlock) {
         return;
       }
@@ -62,13 +63,33 @@ export function proceed(context: Context, code: string): string {
 
   const ifBlocks = toIfBlocks(context, dirvBlocks);
 
-  console.log(ifBlocks);
+  apply(context, code, ifBlocks);
 
-  return '';
+  console.log(ifBlocks.length, ifBlocks);
+
+  return apply(context, code, ifBlocks);
+}
+
+/**
+ * [INFO] This is the most imaginative part of the whole project
+ * - left variables assignment and calculation to `new Function`
+ *   - there is no way to be more precise and simple
+ * - this makes the expression is evaluated under JavaScript Syntax
+ * @param context Composed thisArg and plugin options
+ * @param expr expression comes after `#if` or `#elif`
+ * @returns the boolean result of the expression
+ * @throws when the expression is invalid, it is determined by `new Function`
+ */
+function evaluate(context: Context, expr: string): boolean {
+  const v = context.options.variables;
+  const fn = new Function(...v.keys, `return (${expr})`);
+  const result = fn(...v.values);
+  return Boolean(result);
 }
 
 /**
  * Parse the comment to a `IfMacroBlock`
+ * @param context Composed thisArg and plugin options
  * @param text trimmed comment text
  * @returns `null` when the comment is not a `if` macro
  * @throws when the syntax is invalid
@@ -100,20 +121,12 @@ function toBaseDirvBlock(context: Context, text: string): BaseDirvBlock | null {
   };
 }
 
-function evaluate(context: Context, expr: string): boolean {
-  const v = context.options.variables;
-  const fn = new Function(...v.keys, `return (${expr})`);
-  const result = fn(...v.values);
-  return Boolean(result);
-}
-
-// todo 应该把一组if的内容融入一个叫IfBlock的对象里
 /**
  * Check whether the normal `if` syntax is correct and add `indexes` to each `IfBlock`
  *
  * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
- * @param dirvBlocks
- * @throws
+ * @param context Composed thisArg and plugin options
+ * @param dirvBlocks created by `toBaseDirvBlock`
  */
 function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
   if (dirvBlocks.length === 0) {
@@ -188,4 +201,10 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfBlock[] {
   return ifBlocks;
 }
 
-function warnEmptyBlocks(context: Context, blocks: DirvBlock[]) {}
+/**
+ * Apply the transformations to the code
+ * - detects empty blocks and give a warning
+ * @param context Composed thisArg and plugin options
+ * @param ifBlocks
+ */
+function apply(context: Context, code: string, ifBlocks: IfBlock[]): string {}

@@ -11,3 +11,7 @@ function greet(name) {
   return 'Feature not available.';
   /** #endif */
 }
+
+/** #if FEATURE_GREET */
+console.log(greet('Alice'));
+/** #endif */
