@@ -13,7 +13,8 @@ describe('acorn use', () => {
     const ctx = mockContext({
       variables: {
         DEBUG: false,
-        FEATURE_GREET: 1,
+        PARENT: 1,
+        CHILD: 0,
       },
     });
     expect(proceed(ctx, JS)).toBeTypeOf('string');

@@ -4,14 +4,14 @@ console.log('Debug mode is enabled');
 console.log('Debug mode is disabled');
 /** #endif */
 
+/** #if PARENT */
 function greet(name) {
-  /** #if FEATURE_GREET */
+  /** #if CHILD */
   return `Hello, ${name}!`;
   /** #else */
   return 'Feature not available.';
   /** #endif */
 }
 
-/** #if FEATURE_GREET */
 console.log(greet('Alice'));
 /** #endif */

@@ -62,7 +62,7 @@ export function proceed(context: Context, code: string): string {
     },
   });
 
-  const ifBlocks = toIfBlocks(context, dirvBlocks);
+  const ifBlocks = toIfNodes(context, dirvBlocks);
 
   apply(context, code, ifBlocks);
 
@@ -136,7 +136,7 @@ function toBaseDirvBlock(context: Context, text: string): BaseDirvBlock | null {
  * @param context Composed thisArg and plugin options
  * @param dirvBlocks created by `toBaseDirvBlock`
  */
-function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
+function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   if (dirvBlocks.length === 0) {
     return [];
   }
@@ -144,19 +144,6 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   if (dirvBlocks.length === 1) {
     context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
   }
-
-  const createIfNode = (dirvBlock: DirvBlock<Dirv.If>, parent: IfNode | null): IfNode => ({
-    parent,
-    blocks: [
-      {
-        condition: dirvBlock.condition,
-        children: dirvBlock.children,
-        start: dirvBlock.start,
-        end: dirvBlock.end,
-      },
-    ],
-    endif: null as any, // will be assigned later
-  });
 
   const ifNodes: IfNode[] = [];
 
@@ -168,13 +155,25 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   let current: IfNode | null = null;
   let hasElse = false;
 
+  const createIfNode = (dirvBlock: DirvBlock<Dirv.If>): IfNode => ({
+    parent: stack.length === 0 ? null : stack[stack.length - 1],
+    blocks: [
+      {
+        condition: dirvBlock.condition,
+        children: dirvBlock.children,
+        start: dirvBlock.start,
+        end: dirvBlock.end,
+      },
+    ],
+    endif: null as any, // will be assigned later
+  });
+
   // todo 可以用weakmap来保存 blocks数组里每一项对应的index
   for (let i = 0; i < dirvBlocks.length; i++) {
     const dirvBlock = dirvBlocks[i];
     if (isIf(dirvBlock)) {
-      const isTopBlock = parent === null;
-      current = createIfNode(dirvBlock, parent);
-      if (isTopBlock) {
+      current = createIfNode(dirvBlock);
+      if (current.parent === null) {
         ifNodes.push(current);
       }
       stack.push(current);
@@ -234,26 +233,25 @@ function toIfBlocks(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
  * @param ifBlocks
  */
 function apply(context: Context, code: string, ifBlocks: IfNode[]): string {
-  const codeBlocks: string[] = [];
-  const _apply = (ifBlock: IfNode) => {
-    if (ifBlock.if.condition) {
-      if (ifBlock.if.children.length === 0) {
-        codeBlocks.push(code.slice(ifBlock.if.end + 1, 下一个块.start));
-      } else {
-        ifBlock.if.children.forEach(_apply);
-      }
-      return;
-    }
-    for (let i = 0; i < ifBlock.elif.length; i++) {
-      const elif = ifBlock.elif[i];
-      if (elif.condition) {
-      }
-    }
-  };
-
-  for (let i = 0; i < ifBlocks.length; i++) {
-    const b = ifBlocks[i];
-    if (b.if.condition) {
-    }
-  }
+  // const codeBlocks: string[] = [];
+  // const _apply = (ifBlock: IfNode) => {
+  //   if (ifBlock.if.condition) {
+  //     if (ifBlock.if.children.length === 0) {
+  //       codeBlocks.push(code.slice(ifBlock.if.end + 1, 下一个块.start));
+  //     } else {
+  //       ifBlock.if.children.forEach(_apply);
+  //     }
+  //     return;
+  //   }
+  //   for (let i = 0; i < ifBlock.elif.length; i++) {
+  //     const elif = ifBlock.elif[i];
+  //     if (elif.condition) {
+  //     }
+  //   }
+  // };
+  // for (let i = 0; i < ifBlocks.length; i++) {
+  //   const b = ifBlocks[i];
+  //   if (b.if.condition) {
+  //   }
+  // }
 }
