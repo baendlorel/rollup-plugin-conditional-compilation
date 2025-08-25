@@ -1,7 +1,7 @@
 import { normalize } from '@/compiler/normalizer.js';
 import { TransformPluginContext } from 'rollup';
 
-export const mockContext = (options?: __OPTS__): Context => {
+export const mockContext = (code: string, id: string, options?: __OPTS__): Context => {
   const opts = normalize(options);
   if (typeof opts === 'string') {
     throw new Error(opts);
@@ -14,5 +14,7 @@ export const mockContext = (options?: __OPTS__): Context => {
       },
     } as TransformPluginContext,
     options: opts,
+    code,
+    id,
   };
 };

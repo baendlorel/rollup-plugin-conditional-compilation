@@ -25,9 +25,11 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
       const context: Context = {
         options: opts,
         this: this,
+        code,
+        id,
       };
       try {
-        return proceed(context, code);
+        return proceed(context);
       } catch (error) {
         this.error(`error in ${id} - ${error instanceof Error ? error.message : error}`);
       }
@@ -40,10 +42,10 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
  * @param context Composed thisArg and plugin options
  * @param code source coude
  */
-export function proceed(context: Context, code: string): string {
+export function proceed(context: Context): string {
   console.log('proceeding...');
   const dirvBlocks: DirvBlock[] = [];
-  acorn.parse(code, {
+  acorn.parse(context.code, {
     ecmaVersion: context.options.ecmaVersion,
     sourceType: context.options.sourceType,
     // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
@@ -64,11 +66,9 @@ export function proceed(context: Context, code: string): string {
 
   const ifBlocks = toIfNodes(context, dirvBlocks);
 
-  apply(context, code, ifBlocks);
-
   console.log(ifBlocks.length, ifBlocks);
 
-  return apply(context, code, ifBlocks);
+  return apply(context, ifBlocks);
 }
 
 /**
@@ -232,7 +232,7 @@ function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
  * @param context Composed thisArg and plugin options
  * @param ifBlocks
  */
-function apply(context: Context, code: string, ifBlocks: IfNode[]): string {
+function apply(context: Context, ifBlocks: IfNode[]): string {
   // const codeBlocks: string[] = [];
   // const _apply = (ifBlock: IfNode) => {
   //   if (ifBlock.if.condition) {

@@ -10,6 +10,8 @@ declare global {
   interface Context {
     this: TransformPluginContext;
     options: __STRICT_OPTS__;
+    code: string;
+    id: string;
   }
 
   interface __OPTS__ {

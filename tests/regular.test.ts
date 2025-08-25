@@ -10,13 +10,13 @@ const JS = readFileSync(JS_PATH, 'utf-8');
 
 describe('acorn use', () => {
   it('should parse comments', () => {
-    const ctx = mockContext({
+    const ctx = mockContext(JS, JS_PATH, {
       variables: {
         DEBUG: false,
         PARENT: 1,
         CHILD: 0,
       },
     });
-    expect(proceed(ctx, JS)).toBeTypeOf('string');
+    expect(proceed(ctx)).toBeTypeOf('string');
   });
 });
