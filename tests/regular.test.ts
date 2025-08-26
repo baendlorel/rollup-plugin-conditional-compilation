@@ -5,7 +5,7 @@ import { expect, describe, it } from 'vitest';
 import { proceed } from '@/compiler/if.js';
 import { mockContext } from './mock-context.js';
 
-const JS_PATH = join(import.meta.dirname, '..', 'mock', 'src', 'sample.js');
+const JS_PATH = join(import.meta.dirname, '..', 'mock', 'src', 'sample1.js');
 const JS = readFileSync(JS_PATH, 'utf-8');
 
 describe('acorn use', () => {

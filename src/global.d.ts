@@ -59,6 +59,7 @@ declare global {
    */
   // codeEnd: number;
   interface IfNode {
+    dirv: Dirv;
     /**
      * [NOTE] We can merge the same logic together because:
      * - when applying, `#if` uses the same logic as `#elif` (both check the condition to include or not)

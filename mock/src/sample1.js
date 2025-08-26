@@ -1,10 +1,6 @@
-/** #if DEBUG */
-console.log('Debug mode is enabled');
-/** #else */
-console.log('Debug mode is disabled');
-/** #endif */
-
 /** #if PARENT */
+const a = 3;
+/** #else */
 function greet(name) {
   /** #if CHILD */
   return `Hello, ${name}!`;
@@ -12,6 +8,5 @@ function greet(name) {
   return 'Feature not available.';
   /** #endif */
 }
-
 console.log(greet('Alice'));
 /** #endif */

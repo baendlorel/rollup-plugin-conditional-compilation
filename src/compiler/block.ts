@@ -79,6 +79,7 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
 
   const hasElse = new Set<IfNode>();
   // todo 要有两个stack，一个是if的stack，一个是所有node的stack用来判断现在是谁的children
+  const rootStack: IfNode[] = [];
   const stack: IfNode[] = [];
 
   for (let i = 0; i < dirvBlocks.length; i++) {
@@ -87,39 +88,42 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
     // next level
     if (isIf(b)) {
       const child: IfNode = {
+        dirv: b.dirv,
         condition: b.condition,
         start: b.start,
         end: b.end,
       };
-      // todo 要判定stack是否为空
 
-      const children = stack[stack.length - 1].children;
-      if (children) {
-        children.push(child);
-      } else {
-        stack[stack.length - 1].children = [child];
+      if (rootStack.length > 0) {
+        const children = rootStack[rootStack.length - 1].children;
+        if (children) {
+          children.push(child);
+        } else {
+          rootStack[rootStack.length - 1].children = [child];
+        }
       }
 
-      stack.push(child);
+      rootStack.push(child);
 
       // only push root node
-      if (stack.length === 1) {
+      if (rootStack.length === 1) {
         nodes.push(child);
       }
       continue;
     }
 
-    if (stack.length === 0) {
+    if (rootStack.length === 0) {
       context.this.error(`Unexpected '${b.dirv}', directive index: ${i}`);
     }
 
-    const current = stack[stack.length - 1];
+    const current = rootStack[rootStack.length - 1];
     if (isEndif(b)) {
       attach(current, {
+        dirv: b.dirv,
         start: b.start,
         end: b.end,
       });
-      stack.pop();
+      rootStack.pop();
       continue;
     }
 
@@ -130,6 +134,7 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
       }
       hasElse.add(current);
       attach(current, {
+        dirv: b.dirv,
         condition: true,
         start: b.start,
         end: b.end,
@@ -144,6 +149,7 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
         );
       }
       attach(current, {
+        dirv: b.dirv,
         condition: b.condition,
         start: b.start,
         end: b.end,
@@ -154,7 +160,7 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
 
   hasElse.clear();
 
-  if (stack.length !== 0) {
+  if (rootStack.length !== 0) {
     context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
   }
 
