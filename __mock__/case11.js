@@ -1,0 +1,32 @@
+// Multiple elif chains testing precedence
+// #if false
+console.log('never1');
+// #elif false
+console.log('never2');
+// #elif false
+console.log('never3');
+// #elif true
+console.log('fourth-condition');
+// #elif true
+console.log('never4');
+// #else
+console.log('never5');
+// #endif
+
+// Deep nesting with mixed if/elif/else at different levels
+// #if LEVEL1
+console.log('L1-start');
+// #if LEVEL2
+console.log('L2-start');
+// #elif LEVEL2_ALT
+console.log('L2-alt');
+// #if LEVEL3
+console.log('L3-deep');
+// #endif
+// #else
+console.log('L2-else');
+// #endif
+console.log('L1-end');
+// #endif
+
+console.log('done11');

@@ -136,6 +136,10 @@ export class IfParser {
       }
     }
 
+    if (stack.length === 0) {
+      throw new Error('Unclosed directive blocks found: ' + JSON.stringify(stack));
+    }
+
     return result;
   }
 
