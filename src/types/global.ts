@@ -4,54 +4,27 @@ export interface RollupConditionalCompilationOptions {
 
 type l = RollupConditionalCompilationOptions;
 declare global {
+  type Opts = l;
+
   // Basic directives, act like they are in C++
   const enum Dirv {
     If = '#if',
-    Else = '#else',
-    Elif = '#elif',
+    // Else = '#else',
+    // Elif = '#elif',
     Endif = '#endif',
   }
 
-  type Opts = l;
-
-  interface DirvBlock<D extends Dirv = Dirv> {
-    dirv: D;
-
-    /**
-     * Condition expression
-     * - `boolean` when `dirv` is 'if' or 'elif'
-     * - other directive types have `null`
-     */
-    condition: D extends Dirv.Endif | Dirv.Else ? null : boolean;
-
-    /**
-     * Comes from the hook `onComment` in  `acorn.parse`
-     */
+  interface IfBlock {
+    condition: boolean;
     start: number;
-
-    /**
-     * Comes from the hook `onComment` in  `acorn.parse`
-     */
     end: number;
+    children: IfBlock[];
   }
 
-  type BaseDirvBlock = Omit<DirvBlock, 'start' | 'end'>;
-
-  interface IfNode {
+  interface DirvBlock {
     dirv: Dirv;
-    /**
-     * [NOTE] We can merge the same logic together because:
-     * - when applying, `#if` uses the same logic as `#elif` (both check the condition to include or not)
-     * - `#else` is equivalent to `#elif true`
-     */
-    condition?: boolean;
-
-    next?: IfNode;
-
-    children?: IfNode[];
-
+    condition: boolean | null;
     start: number;
-
     end: number;
   }
 }

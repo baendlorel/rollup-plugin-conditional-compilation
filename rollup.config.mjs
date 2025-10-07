@@ -69,7 +69,7 @@ const options = [
       constEnum(),
       resolve(),
       commonjs(),
-      typescript({ tsconfig }),
+      typescript({ tsconfig, removeComments: false }),
       terser({
         format: {
           comments: false, // remove comments

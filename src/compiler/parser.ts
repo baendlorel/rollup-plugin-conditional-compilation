@@ -1,9 +1,7 @@
 import * as acorn from 'acorn';
 
 export class ConditionalCompilationParser {
-  private static readonly IF_MACRO_REGEX = new RegExp(
-    `^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`
-  );
+  private static readonly IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Endif})\\b`);
 
   private readonly _opts: Opts;
   private readonly varKeys: string[] = [];
@@ -21,33 +19,44 @@ export class ConditionalCompilationParser {
   /**
    * Analyzing code with acorn
    */
-  proceed(code: string): string {
+  proceed(code: string): { code: string; map: null } | null {
     console.log('proceeding...');
-    const dirvBlocks: DirvBlock[] = [];
-    const toBlock = (text: string) => this.toBaseDirvBlockOrNull(text);
+    const blocks: DirvBlock[] = [];
+    const toBlock: typeof this.tryParseToBlock = (r, s, e) => this.tryParseToBlock(r, s, e);
 
     acorn.parse(code, {
       ecmaVersion: 'latest',
       // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
+
+      /**
+       * @param isBlock whether its a '/⋆ ... ⋆/' comment
+       * @param text text inside the comment, excludes the boundaries
+       * @param start start index, includes boundary
+       * @param end end index, boundary + 1
+       */
       onComment(isBlock, text, start, end) {
-        // & Only allows block comments like `/* #if ... */`, `// #if` is ignored
-        if (!isBlock) {
+        // & Only allows `// #if ...`
+        if (isBlock) {
           return;
         }
 
-        const baseDirvBlock = toBlock(text.trim());
-        if (!baseDirvBlock) {
-          return;
-        }
-
-        dirvBlocks.push(Object.assign({ start, end, children: [] }, baseDirvBlock));
+        const b = toBlock(text, start, end);
+        b && blocks.push(b);
       },
     });
 
-    const ifNodes = toIfNodes(context, dirvBlocks);
+    const ifNodes = this.collect(blocks);
 
     console.dir(ifNodes, { depth: 6 });
-    return apply(ifNodes);
+
+    if (ifNodes.length === 0) {
+      return null;
+    } else {
+      return {
+        code: '',
+        map: null,
+      };
+    }
   }
 
   /**
@@ -56,121 +65,24 @@ export class ConditionalCompilationParser {
    *
    * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
    */
-  toIfNodes(dirvBlocks: DirvBlock[]): IfNode[] {
+  collect(dirvBlocks: DirvBlock[]): IfBlock[] {
     if (dirvBlocks.length === 0) {
       return [];
     } else if (dirvBlocks.length === 1) {
       throw new Error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
     }
 
-    const attach = (start: IfNode, next: IfNode) => {
-      let last: IfNode = start;
-      while (last.next !== undefined) {
-        last = last.next;
-      }
-      last.next = next;
-    };
-
-    const nodes: IfNode[] = [];
-
-    const hasElse = new Set<IfNode>();
-    const rootStack: IfNode[] = [];
-    const parentStack: IfNode[] = [];
-
-    for (let i = 0; i < dirvBlocks.length; i++) {
-      const b = dirvBlocks[i];
-
-      // next level
-      if (isIf(b)) {
-        const child: IfNode = {
-          dirv: b.dirv,
-          condition: b.condition,
-          start: b.start,
-          end: b.end,
-        };
-
-        if (parentStack.length > 0) {
-          const children = parentStack[parentStack.length - 1].children;
-          if (children) {
-            children.push(child);
-          } else {
-            parentStack[parentStack.length - 1].children = [child];
-          }
-        }
-
-        rootStack.push(child);
-
-        // only push root node
-        if (rootStack.length === 1) {
-          nodes.push(child);
-        }
-        continue;
-      }
-
-      if (rootStack.length === 0) {
-        context.this.error(`Unexpected '${b.dirv}', directive index: ${i}`);
-      }
-
-      const current = rootStack[rootStack.length - 1];
-      if (isEndif(b)) {
-        attach(current, {
-          dirv: b.dirv,
-          start: b.start,
-          end: b.end,
-        });
-        rootStack.pop();
-        continue;
-      }
-
-      // lateral
-      if (isElse(b)) {
-        if (hasElse.has(current)) {
-          context.this.error(
-            `Multiple '${Dirv.Else}' in the same 'if' block, directive index: ${i}`
-          );
-        }
-        hasElse.add(current);
-        attach(current, {
-          dirv: b.dirv,
-          condition: true,
-          start: b.start,
-          end: b.end,
-        });
-        continue;
-      }
-
-      if (isElif(b)) {
-        if (hasElse.has(current)) {
-          context.this.error(
-            `'${Dirv.Elif}' cannot appear after '${Dirv.Else}', directive index: ${i}`
-          );
-        }
-        attach(current, {
-          dirv: b.dirv,
-          condition: b.condition,
-          start: b.start,
-          end: b.end,
-        });
-        continue;
-      }
-    }
-
-    if (rootStack.length !== 0) {
-      context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
-    }
-
-    hasElse.clear();
-    return nodes;
+    return [];
   }
 
   /**
    * Parse the comment to a `IfMacroBlock`
-   * @param text trimmed comment text
+   * @param raw trimmed comment text
    */
-  toBaseDirvBlockOrNull(text: string): BaseDirvBlock | null {
-    text = text.replace(/(^|\n)[*\s]+/g, '');
+  tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
+    raw = raw.replace(/(^|\n)[*\s]+/g, '');
     let dirv = null as Dirv | null;
-    const expr = text
+    const expr = raw
       .replace(ConditionalCompilationParser.IF_MACRO_REGEX, (_, $1: Dirv) => {
         dirv = $1;
         return '';
@@ -181,7 +93,7 @@ export class ConditionalCompilationParser {
       return null;
     }
 
-    const needCondition = dirv === Dirv.If || dirv === Dirv.Elif;
+    const needCondition = dirv === Dirv.If;
 
     if (!needCondition && expr !== '') {
       throw new Error(`'${dirv}' should not have any expression, but got: "${expr}"`);
@@ -204,10 +116,7 @@ export class ConditionalCompilationParser {
   }
 
   /**
-   * ## Most imaginative part
-   * - left variables assignment and calculation to `new Function`
-   *   - there is no way to be more precise and simple
-   * - this makes the expression is evaluated under JavaScript Syntax
+   * & Most imaginative part
    */
   private evaluate(expr: string): boolean {
     const fn = new Function(...this.varKeys, `return (${expr})`);
