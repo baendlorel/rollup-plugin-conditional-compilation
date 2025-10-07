@@ -74,8 +74,10 @@ export class IfParser {
         break;
       case Dirv.Else:
         condition = true;
+        break;
       case Dirv.Endif:
         condition = false;
+        break;
       default:
         throw new Error('Unexpected directive ' + dirv);
     }
@@ -146,7 +148,7 @@ export class IfParser {
       }
     }
 
-    if (stack.length === 0) {
+    if (stack.length > 0) {
       throw new Error('Unclosed directive blocks found: ' + JSON.stringify(stack));
     }
 

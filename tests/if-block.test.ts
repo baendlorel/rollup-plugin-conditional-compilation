@@ -23,7 +23,7 @@ console.log('inside');
     expect(typeof ifBlock.end).toBe('number');
 
     expect(endifBlock.dirv).toBe('#endif');
-    expect(endifBlock.condition).toBeNull();
+    expect(endifBlock.condition).toBe(false);
   });
 
   it('collect should produce nested IfBlock tree for nested directives', () => {
