@@ -1,6 +1,6 @@
 {
 	"name": "rollup-plugin-conditional-compilation",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"projectType": "library",
 	"author": {
 		"name": "Kasukabe Tsumugi",
@@ -28,13 +28,10 @@
 		"url": "https://github.com/baendlorel/rollup-plugin-conditional-compilation"
 	},
 	"keywords": [
-		"deep",
-		"clone",
-		"reflect",
-		"property",
-		"path",
-		"object",
-		"nested",
+		"conditional",
+		"compilation",
+		"plugin",
+		"rollup",
 		"typescript",
 		"javascript"
 	],
