@@ -22,6 +22,11 @@ export class IfParser {
   proceed(code: string): { code: string; map: null } | null {
     console.log('proceeding...');
 
+    // todo 支持else和elif的办法！ 就是把else当成一个end加一个新的带有!上一个if条件的块
+    if (code.includes(Dirv.Else) || code.includes(Dirv.Elif)) {
+      console.warn('Warning: #else and #elif are not supported yet and will be ignored.');
+    }
+
     const dirvBlocks = this.toDirvBlocks(code);
     if (dirvBlocks.length === 0) {
       return null;

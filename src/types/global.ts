@@ -9,8 +9,8 @@ declare global {
   // Basic directives, act like they are in C++
   const enum Dirv {
     If = '#if',
-    // Else = '#else',
-    // Elif = '#elif',
+    Else = '#else',
+    Elif = '#elif',
     Endif = '#endif',
   }
 

@@ -10,8 +10,8 @@ import { join } from 'node:path';
 
 Reflect.set(globalThis, 'Dirv', {
   If: '#if',
-  // Else : '#else',
-  // Elif : '#elif',
+  Else: '#else',
+  Elif: '#elif',
   Endif: '#endif',
 });
 
