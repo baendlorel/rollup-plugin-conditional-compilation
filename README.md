@@ -7,12 +7,12 @@ A simple plugin that allows you to include or exclude code blocks based on compi
 
 > **Note**: This plugin is a simplified version that only supports `#if` and `#endif` for now. Supports for `#else`, `#elif` will be added in future releases.
 
-For more awesome packages, check out [my homepage💛](https://baendlorel.github.io/?repoType=npm)
+**More Rollup plugins** you might be interested in:
 
-**More rollup plugins** you might be interested in:
-
-- [rollup-plugin-conditional-compilation](https://www.npmjs.com/package/rollup-plugin-conditional-compilation): inline your `const enum XXX { ... }` definitions at compile time.
+- [rollup-plugin-const-enum](https://www.npmjs.com/package/rollup-plugin-const-enum): inline your `const enum XXX { ... }` definitions at compile time.
 - [rollup-plugin-func-macro](https://www.npmjs.com/package/rollup-plugin-func-macro): replace `__func__` by function name of current block, and `__file__` by file name at compile time.
+
+For more awesome packages, check out [my homepage💛](https://baendlorel.github.io/?repoType=npm)
 
 ## Installation
 
