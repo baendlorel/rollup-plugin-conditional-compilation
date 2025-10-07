@@ -93,10 +93,15 @@ export class IfParser {
       return [];
     }
 
+    // syntax check first
     for (let i = 1; i < blocks.length; i++) {
-      const d = blocks[i].dirv;
-      if (blocks[i - 1].dirv === Dirv.Else && (d === Dirv.Else || d === Dirv.Elif)) {
+      const cur = blocks[i].dirv;
+      const last = blocks[i - 1].dirv;
+      if (last === Dirv.Else && (cur === Dirv.Else || cur === Dirv.Elif)) {
         throw new Error(cdcp_error.syntax_no_else_or_elif_after_else);
+      }
+      if ((last === Dirv.Elif || last === Dirv.Else) && cur === Dirv.If) {
+        throw new Error(cdcp_error.syntax_no_if_after_else_or_elif);
       }
     }
 
