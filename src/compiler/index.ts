@@ -6,7 +6,6 @@ import { IfParser } from './parser.js';
  * @param options options of the plugin
  *
  * __PKG_INFO__
- *
  */
 export function conditionalCompilation(
   options: Partial<RollupConditionalCompilationOptions> = {}
