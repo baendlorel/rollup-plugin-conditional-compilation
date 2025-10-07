@@ -21,8 +21,6 @@ export class IfParser {
    * Analyzing code with acorn
    */
   proceed(code: string): string | null {
-    console.log('proceeding...');
-
     const dirvBlocks = this.toDirvBlocks(code);
     if (dirvBlocks.length === 0) {
       return null;
@@ -68,7 +66,19 @@ export class IfParser {
       return null;
     }
 
-    const condition = dirv === Dirv.If ? this.evaluate(expr) : null;
+    let condition: boolean;
+    switch (dirv) {
+      case Dirv.If:
+      case Dirv.Elif:
+        condition = this.evaluate(expr);
+        break;
+      case Dirv.Else:
+        condition = true;
+      case Dirv.Endif:
+        condition = false;
+      default:
+        throw new Error('Unexpected directive ' + dirv);
+    }
 
     return { dirv, condition, start, end };
   }
@@ -106,7 +116,7 @@ export class IfParser {
     for (let i = 0; i < dirvBlocks.length; i++) {
       const b = dirvBlocks[i];
       if (b.dirv === Dirv.If) {
-        addIfBlock(b, (b as DirvBlock<typeof b.dirv>).condition);
+        addIfBlock(b, b.condition);
         continue;
       }
 
@@ -131,7 +141,7 @@ export class IfParser {
       }
 
       if (b.dirv === Dirv.Elif) {
-        addIfBlock(b, !lastIf.condition && (b as DirvBlock<typeof b.dirv>).condition);
+        addIfBlock(b, !lastIf.condition && b.condition);
         continue;
       }
     }

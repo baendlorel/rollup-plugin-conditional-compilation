@@ -21,10 +21,16 @@ declare global {
     children: IfBlock[];
   }
 
-  interface DirvBlock<D extends Dirv = Dirv> {
-    dirv: D;
-    condition: D extends Dirv.Endif ? null : boolean;
+  interface DirvBlock {
+    dirv: Dirv;
+
+    /**
+     * When `dirv` is `#endif`, `condition` is meaningless (always `false`).
+     */
+    condition: boolean;
+
     start: number;
+
     end: number;
   }
 }
