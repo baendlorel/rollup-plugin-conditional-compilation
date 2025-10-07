@@ -22,22 +22,19 @@ export class IfParser {
   proceed(code: string): { code: string; map: null } | null {
     console.log('proceeding...');
 
-    const blocks = this.getBlocks(code);
-    const ifNodes = this.collect(blocks);
-
-    console.dir(ifNodes, { depth: 6 });
-
-    if (ifNodes.length === 0) {
+    const dirvBlocks = this.toDirvBlocks(code);
+    if (dirvBlocks.length === 0) {
       return null;
-    } else {
-      return {
-        code: '',
-        map: null,
-      };
     }
+
+    const ifBlocks = this.toIfBlocks(dirvBlocks);
+    return {
+      code: this.compile(code, ifBlocks),
+      map: null,
+    };
   }
 
-  getBlocks(code: string): DirvBlock[] {
+  toDirvBlocks(code: string): DirvBlock[] {
     const blocks: DirvBlock[] = [];
     const toBlock: typeof this.tryParseToBlock = (r, s, e) => this.tryParseToBlock(r, s, e);
 
@@ -84,7 +81,7 @@ export class IfParser {
    *
    * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
    */
-  collect(dirvBlocks: DirvBlock[]): IfBlock[] {
+  toIfBlocks(dirvBlocks: DirvBlock[]): IfBlock[] {
     if (dirvBlocks.length === 0) {
       return [];
     } else if (dirvBlocks.length === 1) {
@@ -98,9 +95,12 @@ export class IfParser {
       if (b.dirv === Dirv.If) {
         const newIfBlock: IfBlock = {
           condition: b.condition as boolean,
-          start: b.start,
-          end: Infinity, // to be filled when '#endif' is found
           children: [],
+
+          ifStart: b.start,
+          ifEnd: b.end,
+          endifStart: NaN, // to be filled when '#endif' is found
+          endifEnd: NaN, // to be filled when '#endif' is found
         };
 
         // ! Order of expressions below cannot be changed!
@@ -119,7 +119,8 @@ export class IfParser {
           throw new Error(`Unmatched '#endif' at ${b.start}:${b.end}`);
         }
         const lastIf = stack.pop() as IfBlock;
-        lastIf.end = b.end;
+        lastIf.endifStart = b.start;
+        lastIf.endifEnd = b.end;
         continue;
       }
     }
@@ -129,10 +130,37 @@ export class IfParser {
 
   /**
    * Apply the transformations to the code
-   * - detects empty blocks and give a warning message
+   * - Only handles `ifBlocks.length > 0` here, =0 will be returned outside
    */
-  apply(ifBlocks: IfBlock[]): string {
-    return '';
+  compile(code: string, ifBlocks: IfBlock[]): string {
+    const drop: number[] = [];
+
+    const visit = (ifBlock: IfBlock) => {
+      if (!ifBlock.condition) {
+        drop.push(ifBlock.ifStart, ifBlock.endifEnd);
+        return;
+      }
+
+      drop.push(ifBlock.ifStart, ifBlock.ifEnd); // drop the `#if ...` line
+      for (let i = 0; i < ifBlock.children.length; i++) {
+        visit(ifBlock.children[i]);
+      }
+      drop.push(ifBlock.endifStart, ifBlock.endifEnd); // drop the `#endif ...` line
+    };
+
+    for (let i = 0; i < ifBlocks.length; i++) {
+      visit(ifBlocks[i]);
+    }
+
+    // & now we get the indexes needs to be kept
+    const keep = [0, ...drop, code.length];
+
+    const result: string[] = [];
+    for (let i = 0; i < keep.length; i += 2) {
+      result.push(code.slice(keep[i], keep[i + 1]));
+    }
+
+    return result.join('');
   }
 
   /**

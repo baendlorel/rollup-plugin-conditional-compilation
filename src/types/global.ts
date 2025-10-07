@@ -16,8 +16,10 @@ declare global {
 
   interface IfBlock {
     condition: boolean;
-    start: number;
-    end: number;
+    ifStart: number;
+    ifEnd: number;
+    endifStart: number;
+    endifEnd: number;
     children: IfBlock[];
   }
 
