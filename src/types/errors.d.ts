@@ -5,7 +5,6 @@
  */
 declare const enum cdcp_error {
   syntax_no_else_or_elif_after_else = 'SyntaxError: Cannot have #else or #elif after #else',
-  syntax_no_if_after_else_or_elif = 'SyntaxError: Cannot have #if after #else or #elif',
 }
 
 declare const enum cdcp_warning {

@@ -100,9 +100,6 @@ export class IfParser {
       if (last === Dirv.Else && (cur === Dirv.Else || cur === Dirv.Elif)) {
         throw new Error(cdcp_error.syntax_no_else_or_elif_after_else);
       }
-      if ((last === Dirv.Elif || last === Dirv.Else) && cur === Dirv.If) {
-        throw new Error(cdcp_error.syntax_no_if_after_else_or_elif);
-      }
     }
 
     const result: IfBlock[] = [];
