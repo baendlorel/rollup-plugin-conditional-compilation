@@ -69,7 +69,40 @@ export class IfParser {
       throw new Error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
     }
 
-    return [];
+    const result: IfBlock[] = [];
+    const stack: IfBlock[] = [];
+    for (let i = 0; i < dirvBlocks.length; i++) {
+      const b = dirvBlocks[i];
+      if (b.dirv === Dirv.If) {
+        const newIfBlock: IfBlock = {
+          condition: b.condition as boolean,
+          start: b.start,
+          end: Infinity, // to be filled when '#endif' is found
+          children: [],
+        };
+
+        // ! Order of expressions below cannot be changed!
+        if (stack.length === 0) {
+          result.push(newIfBlock);
+        } else {
+          stack[stack.length - 1].children.push(newIfBlock);
+        }
+        stack.push(newIfBlock);
+        continue;
+      }
+
+      if (b.dirv === Dirv.Endif) {
+        // must have a corresponding '#if'
+        if (stack.length === 0) {
+          throw new Error(`Unmatched '#endif' at ${b.start}:${b.end}`);
+        }
+        const lastIf = stack.pop() as IfBlock;
+        lastIf.end = b.end;
+        continue;
+      }
+    }
+
+    return result;
   }
 
   /**
