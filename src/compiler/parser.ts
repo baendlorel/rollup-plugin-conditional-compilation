@@ -21,6 +21,23 @@ export class IfParser {
    */
   proceed(code: string): { code: string; map: null } | null {
     console.log('proceeding...');
+
+    const blocks = this.getBlocks(code);
+    const ifNodes = this.collect(blocks);
+
+    console.dir(ifNodes, { depth: 6 });
+
+    if (ifNodes.length === 0) {
+      return null;
+    } else {
+      return {
+        code: '',
+        map: null,
+      };
+    }
+  }
+
+  getBlocks(code: string): DirvBlock[] {
     const blocks: DirvBlock[] = [];
     const toBlock: typeof this.tryParseToBlock = (r, s, e) => this.tryParseToBlock(r, s, e);
 
@@ -41,19 +58,24 @@ export class IfParser {
         b && blocks.push(b);
       },
     });
+    return blocks;
+  }
 
-    const ifNodes = this.collect(blocks);
-
-    console.dir(ifNodes, { depth: 6 });
-
-    if (ifNodes.length === 0) {
+  /**
+   * Parse the comment to a `IfMacroBlock`
+   * @param raw trimmed comment text
+   */
+  private tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
+    raw = raw.replace(/(^|\n)[*\s]+/g, '');
+    let dirv = null as Dirv | null;
+    const expr = raw.replace(IfParser.IF_MACRO_REGEX, (_, $1: Dirv) => ((dirv = $1), '')).trim();
+    if (dirv === null) {
       return null;
-    } else {
-      return {
-        code: '',
-        map: null,
-      };
     }
+
+    const condition = dirv === Dirv.If ? this.evaluate(expr) : null;
+
+    return { dirv, condition, start, end };
   }
 
   /**
@@ -103,23 +125,6 @@ export class IfParser {
     }
 
     return result;
-  }
-
-  /**
-   * Parse the comment to a `IfMacroBlock`
-   * @param raw trimmed comment text
-   */
-  tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
-    raw = raw.replace(/(^|\n)[*\s]+/g, '');
-    let dirv = null as Dirv | null;
-    const expr = raw.replace(IfParser.IF_MACRO_REGEX, (_, $1: Dirv) => ((dirv = $1), '')).trim();
-    if (dirv === null) {
-      return null;
-    }
-
-    const condition = dirv === Dirv.If ? this.evaluate(expr) : null;
-
-    return { dirv, condition, start, end };
   }
 
   /**
