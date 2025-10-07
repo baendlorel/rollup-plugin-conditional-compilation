@@ -79,7 +79,7 @@ export class IfParser {
         condition = false;
         break;
       default:
-        throw new Error('Unexpected directive ' + dirv);
+        throw new Error(cdcp_error.unexpected_directive.replace('$0', String(dirv)));
     }
 
     return { dirv, condition, start, end };
@@ -98,7 +98,7 @@ export class IfParser {
       const cur = blocks[i].dirv;
       const last = blocks[i - 1].dirv;
       if (last === Dirv.Else && (cur === Dirv.Else || cur === Dirv.Elif)) {
-        throw new Error(cdcp_error.syntax_no_else_or_elif_after_else);
+        throw new Error(cdcp_error.no_else_or_elif_after_else);
       }
     }
 
@@ -114,7 +114,7 @@ export class IfParser {
         // * Since #endif won't call this function, we can directly use 'else' here
         // `last` here is always truthy because only #if enteres will no `last` needed
       } else {
-        if (!last) throw new Error("Internal error: 'last' is required for #elif and #else");
+        if (!last) throw new Error(cdcp_error.internal_last_required);
 
         // * Here, last IfBlock can only be #if or #elif.
         // - if last is #else, it will be blocked by 'cdcp_error.syntax_no_else_or_elif_after_else' check above
@@ -160,7 +160,12 @@ export class IfParser {
       // the 3 must have a corresponding '#if' to it
       // & original Dirv.Endif handler shares the same logic
       if (stack.length === 0) {
-        throw new Error(`Unmatched '${b.dirv}' at ${b.start}:${b.end}`);
+        throw new Error(
+          cdcp_error.unmatched
+            .replace('$0', String(b.dirv))
+            .replace('$1', String(b.start))
+            .replace('$2', String(b.end))
+        );
       }
       const last = stack.pop() as IfBlock;
       last.endifStart = b.start;
@@ -183,7 +188,7 @@ export class IfParser {
     }
 
     if (stack.length > 0) {
-      throw new Error('Unclosed directive blocks found: ' + JSON.stringify(stack));
+      throw new Error(cdcp_error.unclosed_blocks.replace('$0', JSON.stringify(stack)));
     }
 
     return result;
@@ -233,7 +238,11 @@ export class IfParser {
       const result = fn(...this._values);
       return Boolean(result);
     } catch (e) {
-      throw new Error(`"${expr}" with error ${e instanceof Error ? e.message : e}`);
+      throw new Error(
+        cdcp_error.expr_error
+          .replace('$0', expr)
+          .replace('$1', e instanceof Error ? e.message : String(e))
+      );
     }
   }
 }

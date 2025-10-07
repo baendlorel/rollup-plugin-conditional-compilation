@@ -20,7 +20,12 @@ Reflect.set(globalThis, 'loadjs', (name: string) =>
 );
 
 Reflect.set(globalThis, 'cdcp_error', {
-  syntax_no_else_or_elif_after_else: 'SyntaxError: Cannot have #else or #elif after #else',
+  no_else_or_elif_after_else: 'SyntaxError: Cannot have #else or #elif after #else',
+  unexpected_directive: 'Unexpected directive $0',
+  internal_last_required: "Internal error: 'last' is required for #elif and #else",
+  unmatched: "Unmatched '$0' at $1:$2",
+  unclosed_blocks: 'Unclosed directive blocks found: $0',
+  expr_error: '"$0" with error $1',
 });
 
 Reflect.set(globalThis, 'cdcp_warning', {
