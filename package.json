@@ -1,6 +1,6 @@
 {
 	"name": "rollup-plugin-conditional-compilation",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"projectType": "library",
 	"author": {
 		"name": "Kasukabe Tsumugi",
@@ -43,7 +43,7 @@
 		"mock": "node ./scripts/rollup.mjs && cd tests && rollup -c",
 		"lint": "oxlint .",
 		"cover": "clear & vitest --coverage",
-		"build": "node ./scripts/rollup.mjs"
+		"build": "tsx ./.scripts/rollup.ts"
 	},
 	"license": "MIT",
 	"devDependencies": {

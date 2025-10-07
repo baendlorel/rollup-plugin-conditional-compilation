@@ -1,6 +1,4 @@
-export interface RollupConditionalCompilationOptions {
-  variables: Record<string, unknown>;
-}
+import { RollupConditionalCompilationOptions } from './common.js';
 
 type l = RollupConditionalCompilationOptions;
 declare global {

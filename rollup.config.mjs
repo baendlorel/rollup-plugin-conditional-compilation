@@ -86,7 +86,7 @@ const options = [
           },
         },
       }),
-    ],
+    ].filter(Boolean),
     external: [],
   },
 ];
@@ -97,13 +97,7 @@ const options = [
 const declaration = {
   input: 'src/index.ts',
   output: [{ file: 'dist/index.d.ts', format: 'es' }],
-  plugins: [
-    alias(aliasOpts),
-    replace(replaceOpts),
-    dts({ tsconfig }),
-    //& dts-merger:2.0.0 is different from 1.3.0
-    dtsMerger({ replace: { ...replaceOpts.values, ...replaceLiteralOpts } }),
-  ],
+  plugins: [alias(aliasOpts), replace(replaceOpts), dts({ tsconfig })],
 };
 
 /**

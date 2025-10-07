@@ -1,5 +1,5 @@
 import type { Plugin } from 'rollup';
-import { RollupConditionalCompilationOptions } from '@/types/global.js';
+import { RollupConditionalCompilationOptions } from '@/types/common.js';
 import { IfParser } from './parser.js';
 
 /**
