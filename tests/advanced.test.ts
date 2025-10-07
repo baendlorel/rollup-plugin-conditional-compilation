@@ -120,7 +120,6 @@ describe('Advanced if/elif/else compilation tests', () => {
         variables: { LEVEL1: true, LEVEL2: false, LEVEL2_ALT: true, LEVEL3: true },
       });
       const result = parser.proceed(code);
-      console.log(result);
 
       expect(result).toContain("console.log('L1-start');");
       expect(result).not.toContain("console.log('L2-start');");
@@ -617,7 +616,7 @@ describe('Advanced if/elif/else compilation tests', () => {
       // According to the parser logic, #else is treated as #endif + #if
       // Multiple #else after #if would create multiple sequential if blocks
       // The first else closes the if, the second else is orphaned
-      expect(() => parser.proceed(code)).toThrow(/[Uu]nmatched.*#else/);
+      expect(() => parser.proceed(code)).toThrow(/Cannot have #else or #elif after #else/);
     });
   });
 
