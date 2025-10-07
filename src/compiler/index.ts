@@ -1,6 +1,6 @@
-import type { Plugin, TransformPluginContext } from 'rollup';
+import type { Plugin } from 'rollup';
 import { RollupConditionalCompilationOptions } from '@/types/global.js';
-import { ConditionalCompilationParser } from './parser.js';
+import { IfParser } from './parser.js';
 
 /**
  * @param options options of the plugin
@@ -12,7 +12,7 @@ export function conditionalCompilation(
   options: Partial<RollupConditionalCompilationOptions> = {}
 ): Plugin {
   const opts = normalize(options);
-  const parser = new ConditionalCompilationParser(opts);
+  const parser = new IfParser(opts);
 
   return {
     name: '__KEBAB_NAME__',

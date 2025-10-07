@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 
-export class ConditionalCompilationParser {
+export class IfParser {
   private static readonly IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Endif})\\b`);
 
   private readonly _opts: Opts;
@@ -26,8 +26,6 @@ export class ConditionalCompilationParser {
 
     acorn.parse(code, {
       ecmaVersion: 'latest',
-      // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
-
       /**
        * @param isBlock whether its a '/⋆ ... ⋆/' comment
        * @param text text inside the comment, excludes the boundaries
@@ -35,9 +33,8 @@ export class ConditionalCompilationParser {
        * @param end end index, boundary + 1
        */
       onComment(isBlock, text, start, end) {
-        // & Only allows `// #if ...`
         if (isBlock) {
-          return;
+          return; // * Only allows non-block directives: '// #if ...'
         }
 
         const b = toBlock(text, start, end);
@@ -82,43 +79,28 @@ export class ConditionalCompilationParser {
   tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
     raw = raw.replace(/(^|\n)[*\s]+/g, '');
     let dirv = null as Dirv | null;
-    const expr = raw
-      .replace(ConditionalCompilationParser.IF_MACRO_REGEX, (_, $1: Dirv) => {
-        dirv = $1;
-        return '';
-      })
-      .trim();
-
+    const expr = raw.replace(IfParser.IF_MACRO_REGEX, (_, $1: Dirv) => ((dirv = $1), '')).trim();
     if (dirv === null) {
       return null;
     }
 
-    const needCondition = dirv === Dirv.If;
+    const condition = dirv === Dirv.If ? this.evaluate(expr) : null;
 
-    if (!needCondition && expr !== '') {
-      throw new Error(`'${dirv}' should not have any expression, but got: "${expr}"`);
-    }
-
-    const condition = needCondition ? this.evaluate(expr) : null;
-
-    return {
-      dirv,
-      condition,
-    };
+    return { dirv, condition, start, end };
   }
 
   /**
    * Apply the transformations to the code
    * - detects empty blocks and give a warning message
    */
-  apply(ifBlocks: IfNode[]): string {
+  apply(ifBlocks: IfBlock[]): string {
     return '';
   }
 
   /**
    * & Most imaginative part
    */
-  private evaluate(expr: string): boolean {
+  evaluate(expr: string): boolean {
     const fn = new Function(...this.varKeys, `return (${expr})`);
     try {
       const result = fn(...this.varValues);
