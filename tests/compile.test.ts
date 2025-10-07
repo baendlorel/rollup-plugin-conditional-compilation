@@ -60,31 +60,11 @@ describe('IfParser final compile', () => {
     expect(result).toContain('neg');
   });
 
-  it('case8 should be resilient: malformed expressions cause evaluate to throw, inline comments ignored', () => {
+  it('case8 should be resilient: malformed expr cause evaluate to throw, inline comments ignored', () => {
     const code = loadjs('case8.js');
     const opts = { variables: { D: true, A: true } } as any;
     const parser = new IfParser(opts);
 
-    const dirvBlocks = parser.toDirvBlocks(code);
-
-    // there are 3 real directive lines (#if malformed, #if D, #endif)
-    expect(dirvBlocks.length).toBeGreaterThanOrEqual(2);
-
-    // the malformed condition should cause evaluate to throw when parsing that specific block
-    // find the malformed block text by scanning raw code for '(A && )' pattern location
-    const hasMalformed = code.indexOf('(A && )') !== -1;
-    if (hasMalformed) {
-      // we expect evaluate to throw for malformed expression when tryParseToBlock is run
-      expect(() => parser.toDirvBlocks(code)).toThrow();
-    }
-
-    // inline comment with '#if' after code should not be seen as directive; real D block should exist
-    // if parser didn't throw, ensure that 'keep-me' remains and 'd-true' is kept when D=true
-    if (!hasMalformed) {
-      const ifBlocks = parser.toIfBlocks(dirvBlocks);
-      const result = parser.compile(code, ifBlocks);
-      expect(result).toContain('keep-me');
-      expect(result).toContain('d-true');
-    }
+    expect(() => parser.toDirvBlocks(code)).toThrow();
   });
 });

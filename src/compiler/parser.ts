@@ -1,18 +1,19 @@
 import * as acorn from 'acorn';
 
 export class IfParser {
-  private static readonly IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Endif})\\b`);
+  private static readonly _REG = new RegExp(
+    `^(${Dirv.If}|${Dirv.Endif}|${Dirv.Elif}|${Dirv.Else})\\b`
+  );
 
   private readonly _opts: Opts;
-  private readonly varKeys: string[] = [];
-  private readonly varValues: any[] = [];
+  private readonly _keys: string[] = [];
+  private readonly _values: any[] = [];
   constructor(_opts: Opts) {
     this._opts = _opts;
-    const kvArray = Object.entries(this._opts.variables);
-    for (let i = 0; i < kvArray.length; i++) {
-      const kv = kvArray[i];
-      this.varKeys.push(kv[0]);
-      this.varValues.push(kv[1]);
+    const kv = Object.entries(this._opts.variables);
+    for (let i = 0; i < kv.length; i++) {
+      this._keys.push(kv[i][0]);
+      this._values.push(kv[i][1]);
     }
   }
 
@@ -21,11 +22,6 @@ export class IfParser {
    */
   proceed(code: string): { code: string; map: null } | null {
     console.log('proceeding...');
-
-    // todo 支持else和elif的办法！ 就是把else当成一个end加一个新的带有!上一个if条件的块
-    if (code.includes(Dirv.Else) || code.includes(Dirv.Elif)) {
-      console.warn('Warning: #else and #elif are not supported yet and will be ignored.');
-    }
 
     const dirvBlocks = this.toDirvBlocks(code);
     if (dirvBlocks.length === 0) {
@@ -70,7 +66,7 @@ export class IfParser {
   private tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
     raw = raw.replace(/(^|\n)[*\s]+/g, '');
     let dirv = null as Dirv | null;
-    const expr = raw.replace(IfParser.IF_MACRO_REGEX, (_, $1: Dirv) => ((dirv = $1), '')).trim();
+    const expr = raw.replace(IfParser._REG, (_, $1: Dirv) => ((dirv = $1), '')).trim();
     if (dirv === null) {
       return null;
     }
@@ -80,12 +76,6 @@ export class IfParser {
     return { dirv, condition, start, end };
   }
 
-  /**
-   * Check whether the normal `if` syntax is correct and add `indexes` to each `IfChainNode`
-   * - [NOTE] will convert `else` to `elif true`, more convenient for later processing
-   *
-   * rule: must match if → (elif)* → (else)? → endif, * and ? here are the same as they are in regex
-   */
   toIfBlocks(dirvBlocks: DirvBlock[]): IfBlock[] {
     if (dirvBlocks.length === 0) {
       return [];
@@ -95,37 +85,56 @@ export class IfParser {
 
     const result: IfBlock[] = [];
     const stack: IfBlock[] = [];
+
+    const addIfBlock = (b: DirvBlock, condition: boolean): void => {
+      const newIfBlock: IfBlock = {
+        condition: condition,
+        children: [],
+
+        ifStart: b.start,
+        ifEnd: b.end,
+        endifStart: NaN, // to be filled when '#endif' is found
+        endifEnd: NaN, // to be filled when '#endif' is found
+      };
+
+      // ! Order of expressions below cannot be changed!
+      if (stack.length === 0) {
+        result.push(newIfBlock);
+      } else {
+        stack[stack.length - 1].children.push(newIfBlock);
+      }
+      stack.push(newIfBlock);
+    };
+
     for (let i = 0; i < dirvBlocks.length; i++) {
       const b = dirvBlocks[i];
       if (b.dirv === Dirv.If) {
-        const newIfBlock: IfBlock = {
-          condition: b.condition as boolean,
-          children: [],
-
-          ifStart: b.start,
-          ifEnd: b.end,
-          endifStart: NaN, // to be filled when '#endif' is found
-          endifEnd: NaN, // to be filled when '#endif' is found
-        };
-
-        // ! Order of expressions below cannot be changed!
-        if (stack.length === 0) {
-          result.push(newIfBlock);
-        } else {
-          stack[stack.length - 1].children.push(newIfBlock);
-        }
-        stack.push(newIfBlock);
+        addIfBlock(b, (b as DirvBlock<typeof b.dirv>).condition);
         continue;
       }
 
+      // Since we consider other 3 directives as 'endif' + 'if'
+      // the 3 must have a corresponding '#if' to it
+      // & original Dirv.Endif handler shares the same logic
+      if (stack.length === 0) {
+        throw new Error(`Unmatched '${b.dirv}' at ${b.start}:${b.end}`);
+      }
+      const lastIf = stack.pop() as IfBlock;
+      lastIf.endifStart = b.start;
+      lastIf.endifEnd = b.end;
+
       if (b.dirv === Dirv.Endif) {
-        // must have a corresponding '#if'
-        if (stack.length === 0) {
-          throw new Error(`Unmatched '#endif' at ${b.start}:${b.end}`);
-        }
-        const lastIf = stack.pop() as IfBlock;
-        lastIf.endifStart = b.start;
-        lastIf.endifEnd = b.end;
+        continue;
+      }
+
+      // $ Here we convert 'elif' and 'else' to 'endif' + 'if not previous condition'
+      if (b.dirv === Dirv.Else) {
+        addIfBlock(b, !lastIf.condition);
+        continue;
+      }
+
+      if (b.dirv === Dirv.Elif) {
+        addIfBlock(b, !lastIf.condition && (b as DirvBlock<typeof b.dirv>).condition);
         continue;
       }
     }
@@ -172,9 +181,9 @@ export class IfParser {
    * & Most imaginative part
    */
   evaluate(expr: string): boolean {
-    const fn = new Function(...this.varKeys, `return (${expr})`);
+    const fn = new Function(...this._keys, `return (${expr})`);
     try {
-      const result = fn(...this.varValues);
+      const result = fn(...this._values);
       return Boolean(result);
     } catch (e) {
       throw new Error(`"${expr}" with error ${e instanceof Error ? e.message : e}`);
