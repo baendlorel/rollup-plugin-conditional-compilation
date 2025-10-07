@@ -2,6 +2,7 @@ export interface RollupConditionalCompilationOptions {
   variables: Record<string, unknown>;
 }
 
+type l = RollupConditionalCompilationOptions;
 declare global {
   // Basic directives, act like they are in C++
   const enum Dirv {
@@ -11,7 +12,7 @@ declare global {
     Endif = '#endif',
   }
 
-  type RollupConditionalCompilationOption = RollupConditionalCompilationOptions;
+  type Opts = l;
 
   interface DirvBlock<D extends Dirv = Dirv> {
     dirv: D;

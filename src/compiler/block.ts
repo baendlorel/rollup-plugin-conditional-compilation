@@ -20,12 +20,9 @@ function isEndif(block: DirvBlock): block is DirvBlock<Dirv.Endif> {
 
 /**
  * Parse the comment to a `IfMacroBlock`
- * @param context Composed thisArg and plugin options
  * @param text trimmed comment text
- * @returns `null` when the comment is not a `if` macro
- * @throws when the syntax is invalid
  */
-export function toBaseDirvBlockOrNull(context: Context, text: string): BaseDirvBlock | null {
+export function toBaseDirvBlockOrNull(text: string): BaseDirvBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
   let dirv = null as Dirv | null;
   const expr = text
@@ -42,10 +39,10 @@ export function toBaseDirvBlockOrNull(context: Context, text: string): BaseDirvB
   const needCondition = dirv === Dirv.If || dirv === Dirv.Elif;
 
   if (!needCondition && expr !== '') {
-    context.this.error(`'${dirv}' should not have any expression, but got: "${expr}"`);
+    throw new Error(`'${dirv}' should not have any expression, but got: "${expr}"`);
   }
 
-  const condition = needCondition ? evaluate(context, expr) : null;
+  const condition = needCondition ? evaluate(values, expr) : null;
 
   return {
     dirv,
@@ -61,11 +58,11 @@ export function toBaseDirvBlockOrNull(context: Context, text: string): BaseDirvB
  * @param context Composed thisArg and plugin options
  * @param dirvBlocks created by `toBaseDirvBlock`
  */
-export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
+export function toIfNodes(dirvBlocks: DirvBlock[]): IfNode[] {
   if (dirvBlocks.length === 0) {
     return [];
   } else if (dirvBlocks.length === 1) {
-    context.this.error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
+    throw new Error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
   }
 
   const attach = (start: IfNode, next: IfNode) => {
@@ -165,23 +162,3 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   hasElse.clear();
   return nodes;
 }
-
-const pushChild = (node: IfNode, child: IfNode) => {
-  const children = node.children;
-  if (children) {
-    return children.push(child);
-  } else {
-    node.children = [child];
-    return 1;
-  }
-};
-
-const attach = (start: IfNode, next: IfNode) => {
-  let last: IfNode = start;
-  while (last.next !== undefined) {
-    last = last.next;
-  }
-  last.next = next;
-};
-
-function getIfTree(context: Context, dirvBlocks: DirvBlock[]) {}

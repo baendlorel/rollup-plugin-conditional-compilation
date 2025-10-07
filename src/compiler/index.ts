@@ -1,6 +1,5 @@
 import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
-import { normalize } from './normalizer.js';
 import { toBaseDirvBlockOrNull, toIfNodes } from './block.js';
 import { RollupConditionalCompilationOptions } from '@/types/global.js';
 
@@ -11,7 +10,7 @@ import { RollupConditionalCompilationOptions } from '@/types/global.js';
  *
  */
 export function conditionalCompilation(
-  options?: Partial<RollupConditionalCompilationOptions>
+  options: Partial<RollupConditionalCompilationOptions> = {}
 ): Plugin {
   const opts = normalize(options);
 
@@ -22,7 +21,7 @@ export function conditionalCompilation(
         this.error(opts);
       }
       try {
-        return proceed(context);
+        return proceed(options);
       } catch (error) {
         this.error(`error in ${id} - ${error instanceof Error ? error.message : error}`);
       }
@@ -30,17 +29,26 @@ export function conditionalCompilation(
   };
 }
 
+function normalize(options: Partial<Opts>): Opts {
+  if (typeof options !== 'object' || options === null) {
+    throw new Error(`Invalid options: '${options}', must be an object`);
+  }
+
+  if (typeof options.variables !== 'object' || options.variables === null) {
+    throw new Error(`Invalid variables: '${options.variables}', must be an object`);
+  }
+
+  return { variables: options.variables };
+}
+
 /**
  * Analyzing code with acorn
- * @param context Composed thisArg and plugin options
- * @param code source coude
  */
-export function proceed(context: Context): string {
+export function proceed(code: string): string {
   console.log('proceeding...');
   const dirvBlocks: DirvBlock[] = [];
-  acorn.parse(context.code, {
-    ecmaVersion: context.options.ecmaVersion,
-    sourceType: context.options.sourceType,
+  acorn.parse(code, {
+    ecmaVersion: 'latest',
     // locations: true, // & When locations is true, onComment will receive startLoc, endLoc. But it is useless here
     onComment(isBlock, text, start, end) {
       // & Only allows block comments like `/* #if ... */`, `// #if` is ignored
@@ -59,38 +67,14 @@ export function proceed(context: Context): string {
 
   const ifNodes = toIfNodes(context, dirvBlocks);
 
-  console.log('ifNodes.length', ifNodes.length);
   console.dir(ifNodes, { depth: 6 });
-  return apply(context, ifNodes);
+  return apply(ifNodes);
 }
 
 /**
  * Apply the transformations to the code
- * - detects empty blocks and give a warning
- * @param context Composed thisArg and plugin options
- * @param ifBlocks
+ * - detects empty blocks and give a warning message
  */
-function apply(context: Context, ifBlocks: IfNode[]): string {
-  // const codeBlocks: string[] = [];
-  // const _apply = (ifBlock: IfNode) => {
-  //   if (ifBlock.if.condition) {
-  //     if (ifBlock.if.children.length === 0) {
-  //       codeBlocks.push(code.slice(ifBlock.if.end + 1, 下一个块.start));
-  //     } else {
-  //       ifBlock.if.children.forEach(_apply);
-  //     }
-  //     return;
-  //   }
-  //   for (let i = 0; i < ifBlock.elif.length; i++) {
-  //     const elif = ifBlock.elif[i];
-  //     if (elif.condition) {
-  //     }
-  //   }
-  // };
-  // for (let i = 0; i < ifBlocks.length; i++) {
-  //   const b = ifBlocks[i];
-  //   if (b.if.condition) {
-  //   }
-  // }
+function apply(ifBlocks: IfNode[]): string {
   return '';
 }

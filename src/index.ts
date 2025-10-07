@@ -1,2 +1,2 @@
-import { conditionalCompilation } from './compiler/if.js';
+import { conditionalCompilation } from './compiler/index.js';
 export default conditionalCompilation;
