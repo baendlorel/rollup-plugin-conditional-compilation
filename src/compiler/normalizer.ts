@@ -46,12 +46,12 @@ function validSourceType(sourceType: unknown): sourceType is SourceType {
   return SOURCE_TYPES.includes(sourceType as SourceType);
 }
 
-export function normalize(options?: __OPTS__): __STRICT_OPTS__ | string {
+export function normalize(options?: RollupConditionalCompilationOptions): __STRICT_OPTS__ | string {
   if (options !== undefined && (typeof options !== 'object' || options === null)) {
     return `Invalid options: '${options}', must be an object`;
   }
 
-  const o = Object(options) as Required<__OPTS__>;
+  const o = Object(options) as Required<RollupConditionalCompilationOptions>;
   const { variables = {}, ecmaVersion = 'latest', sourceType = 'module' } = o;
 
   if (typeof variables !== 'object' || variables === null) {

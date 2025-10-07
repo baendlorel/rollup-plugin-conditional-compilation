@@ -1,4 +1,3 @@
-import { Dirv } from '@/consts/directives.js';
 import { evaluate } from './evaluate.js';
 
 const IF_MACRO_REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Else}|${Dirv.Elif}|${Dirv.Endif})\\b`);

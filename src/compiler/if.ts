@@ -2,6 +2,7 @@ import * as acorn from 'acorn';
 import type { Plugin, TransformPluginContext } from 'rollup';
 import { normalize } from './normalizer.js';
 import { toBaseDirvBlockOrNull, toIfNodes } from './block.js';
+import { RollupConditionalCompilationOptions } from '@/types/global.js';
 
 /**
  * @param options options of the plugin
@@ -9,7 +10,9 @@ import { toBaseDirvBlockOrNull, toIfNodes } from './block.js';
  * __PKG_INFO__
  *
  */
-export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
+export function conditionalCompilation(
+  options?: Partial<RollupConditionalCompilationOptions>
+): Plugin {
   const opts = normalize(options);
 
   return {
@@ -18,13 +21,6 @@ export function conditionalCompilation(options?: Partial<__OPTS__>): Plugin {
       if (typeof opts === 'string') {
         this.error(opts);
       }
-
-      const context: Context = {
-        options: opts,
-        this: this,
-        code,
-        id,
-      };
       try {
         return proceed(context);
       } catch (error) {
