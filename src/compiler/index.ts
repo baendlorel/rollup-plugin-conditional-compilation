@@ -20,6 +20,7 @@ export function conditionalCompilation(
       try {
         return parser.proceed(code);
       } catch (error) {
+        console.error('parsing error occured:', error);
         this.error(`error in ${id} - ${error instanceof Error ? error.message : error}`);
       }
     },

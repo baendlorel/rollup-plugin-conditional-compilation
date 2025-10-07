@@ -1,10 +1,7 @@
 import * as acorn from 'acorn';
 
+const REGEX = new RegExp(`^(${Dirv.If}|${Dirv.Endif}|${Dirv.Elif}|${Dirv.Else})\\b`);
 export class IfParser {
-  private static readonly _REG = new RegExp(
-    `^(${Dirv.If}|${Dirv.Endif}|${Dirv.Elif}|${Dirv.Else})\\b`
-  );
-
   private readonly _opts: Opts;
   private readonly _keys: string[] = [];
   private readonly _values: any[] = [];
@@ -61,7 +58,7 @@ export class IfParser {
   private tryParseToBlock(raw: string, start: number, end: number): DirvBlock | null {
     raw = raw.replace(/(^|\n)[*\s]+/g, '');
     let dirv = null as Dirv | null;
-    const expr = raw.replace(IfParser._REG, (_, $1: Dirv) => ((dirv = $1), '')).trim();
+    const expr = raw.replace(REGEX, (_, $1: Dirv) => ((dirv = $1), '')).trim();
     if (dirv === null) {
       return null;
     }
@@ -199,19 +196,19 @@ export class IfParser {
    * - Only handles `ifBlocks.length > 0` here, =0 will be returned outside
    */
   compile(code: string, ifBlocks: IfBlock[]): string {
-    const drop: number[] = [];
+    const keep: number[] = [0]; // if it chops first and last item, it will mean `drop`
 
     const visit = (ifBlock: IfBlock) => {
       if (!ifBlock.condition) {
-        drop.push(ifBlock.ifStart, ifBlock.endifEnd);
+        keep.push(ifBlock.ifStart, ifBlock.endifEnd);
         return;
       }
 
-      drop.push(ifBlock.ifStart, ifBlock.ifEnd); // drop the `#if ...` line
+      keep.push(ifBlock.ifStart, ifBlock.ifEnd); // drop the `#if ...` line
       for (let i = 0; i < ifBlock.children.length; i++) {
         visit(ifBlock.children[i]);
       }
-      drop.push(ifBlock.endifStart, ifBlock.endifEnd); // drop the `#endif ...` line
+      keep.push(ifBlock.endifStart, ifBlock.endifEnd); // drop the `#endif ...` line
     };
 
     for (let i = 0; i < ifBlocks.length; i++) {
@@ -219,7 +216,7 @@ export class IfParser {
     }
 
     // & now we get the indexes needs to be kept
-    const keep = [0, ...drop, code.length];
+    keep.push(code.length);
 
     const result: string[] = [];
     for (let i = 0; i < keep.length; i += 2) {
