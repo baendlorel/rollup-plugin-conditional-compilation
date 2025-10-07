@@ -1,5 +1,5 @@
 // @ts-check
-import pkg from './package.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // plugins
@@ -8,13 +8,19 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
 import terser from '@rollup/plugin-terser';
-import babel from '@rollup/plugin-babel';
 import replace from '@rollup/plugin-replace';
 import dts from 'rollup-plugin-dts';
 import dtsMerger from 'rollup-plugin-dts-merger';
+import funcMacro from 'rollup-plugin-func-macro';
+import constEnum from 'rollup-plugin-const-enum';
 
 // custom plugins
-import { replaceOpts } from './plugins/replace.mjs';
+import { replaceLiteralOpts, replaceOpts } from './.scripts/replace.mjs';
+
+/**
+ * @type {import('./package.json')}
+ */
+const pkg = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'));
 
 // # common options
 
@@ -27,7 +33,7 @@ const tsconfig = './tsconfig.build.json';
  * @type {import('@rollup/plugin-alias').RollupAliasOptions}
  */
 const aliasOpts = {
-  entries: [{ find: /^@/, replacement: path.resolve(import.meta.dirname, 'src') }],
+  entries: [{ find: /^@\//, replacement: path.resolve(import.meta.dirname, 'src') + '/' }],
 };
 
 // # main options
@@ -53,30 +59,24 @@ const options = [
 
     plugins: [
       alias(aliasOpts),
+      replace({
+        preventAssignment: false,
+        delimiters: ['', ''],
+        replaceLiteralOpts,
+      }),
       replace(replaceOpts),
+      funcMacro(),
+      constEnum(),
       resolve(),
       commonjs(),
       typescript({ tsconfig }),
-      babel({
-        babelHelpers: 'bundled',
-        extensions: ['.ts', '.tsx', '.js', '.jsx'],
-        presets: [['@babel/preset-env', { targets: { node: '14' } }]],
-        plugins: [
-          [
-            '@babel/plugin-proposal-decorators',
-            {
-              version: '2023-11',
-            },
-          ],
-        ],
-      }),
       terser({
         format: {
           comments: false, // remove comments
         },
         compress: {
           reduce_vars: true,
-          // drop_console: true,
+          drop_console: true,
           dead_code: true, // ✅ Safe: remove dead code
           evaluate: true, // ✅ Safe: evaluate constant expressions
         },
@@ -101,23 +101,19 @@ const declaration = {
     alias(aliasOpts),
     replace(replaceOpts),
     dts({ tsconfig }),
-    dtsMerger({ replace: replaceOpts }),
+    //& dts-merger:2.0.0 is different from 1.3.0
+    dtsMerger({ replace: { ...replaceOpts.values, ...replaceLiteralOpts } }),
   ],
 };
 
 /**
- * @type {'library' | 'server' | 'web'}
+ * @type {'npm'|'rollup-plugin'|'vscode-extension'|'server'|'web'|'app'|'framework'}
  */
-pkg.projectType = 'library';
-switch (pkg.projectType) {
-  case 'library':
+switch (pkg.purpose) {
+  case 'npm':
+  case 'rollup-plugin':
     options.push(declaration);
     break;
-  case 'server':
-  case 'web':
-    break;
-  default:
-    throw new Error(`Project type must be 'library', 'server', or 'web'. Got '${pkg.projectType}'`);
 }
 
 export default options;

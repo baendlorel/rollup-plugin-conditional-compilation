@@ -28,7 +28,7 @@ function isEndif(block: DirvBlock): block is DirvBlock<Dirv.Endif> {
  */
 export function toBaseDirvBlockOrNull(context: Context, text: string): BaseDirvBlock | null {
   text = text.replace(/(^|\n)[*\s]+/g, '');
-  let dirv: Dirv | null = null;
+  let dirv = null as Dirv | null;
   const expr = text
     .replace(IF_MACRO_REGEX, (_, $1: Dirv) => {
       dirv = $1;
@@ -40,11 +40,13 @@ export function toBaseDirvBlockOrNull(context: Context, text: string): BaseDirvB
     return null;
   }
 
-  if ((dirv === Dirv.Else || dirv === Dirv.Endif) && expr !== '') {
+  const needCondition = dirv === Dirv.If || dirv === Dirv.Elif;
+
+  if (!needCondition && expr !== '') {
     context.this.error(`'${dirv}' should not have any expression, but got: "${expr}"`);
   }
 
-  const condition = dirv === Dirv.If || dirv === Dirv.Elif ? evaluate(context, expr) : null;
+  const condition = needCondition ? evaluate(context, expr) : null;
 
   return {
     dirv,
@@ -78,9 +80,8 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
   const nodes: IfNode[] = [];
 
   const hasElse = new Set<IfNode>();
-  // todo 要有两个stack，一个是if的stack，一个是所有node的stack用来判断现在是谁的children
   const rootStack: IfNode[] = [];
-  const stack: IfNode[] = [];
+  const parentStack: IfNode[] = [];
 
   for (let i = 0; i < dirvBlocks.length; i++) {
     const b = dirvBlocks[i];
@@ -94,12 +95,12 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
         end: b.end,
       };
 
-      if (rootStack.length > 0) {
-        const children = rootStack[rootStack.length - 1].children;
+      if (parentStack.length > 0) {
+        const children = parentStack[parentStack.length - 1].children;
         if (children) {
           children.push(child);
         } else {
-          rootStack[rootStack.length - 1].children = [child];
+          parentStack[parentStack.length - 1].children = [child];
         }
       }
 
@@ -158,11 +159,30 @@ export function toIfNodes(context: Context, dirvBlocks: DirvBlock[]): IfNode[] {
     }
   }
 
-  hasElse.clear();
-
   if (rootStack.length !== 0) {
     context.this.error(`Unclosed '${Dirv.If}', missing '${Dirv.Endif}'`);
   }
 
+  hasElse.clear();
   return nodes;
 }
+
+const pushChild = (node: IfNode, child: IfNode) => {
+  const children = node.children;
+  if (children) {
+    return children.push(child);
+  } else {
+    node.children = [child];
+    return 1;
+  }
+};
+
+const attach = (start: IfNode, next: IfNode) => {
+  let last: IfNode = start;
+  while (last.next !== undefined) {
+    last = last.next;
+  }
+  last.next = next;
+};
+
+function getIfTree(context: Context, dirvBlocks: DirvBlock[]) {}

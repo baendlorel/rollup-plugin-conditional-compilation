@@ -18,4 +18,5 @@ pnpm add -D \
  typescript \
  @vitest/coverage-v8 \
  vitest \
- oxlint 
+ oxlint \
+ rollup-plugin-func-macro
