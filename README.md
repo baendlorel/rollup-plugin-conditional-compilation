@@ -25,15 +25,12 @@ pnpm add -D rollup-plugin-conditional-compilation
 
 ```js
 import conditional from 'rollup-plugin-conditional-compilation';
-
 export default {
-  input: 'src/index.js',
-  output: { file: 'dist/bundle.js', format: 'esm' },
   ...other configs,
   plugins: [
     typescript({
-      tsconfig,
-      removeComments: false, // IMPORTANT! Don't strip comments so quickly!
+      ...,
+      removeComments: false, // !!IMPORTANT!! Don't strip comments so quickly!
     }),
     conditional({ variables: { DEBUG: false, FEATURE_X: true } })
   ],
@@ -42,10 +39,11 @@ export default {
 
 ### Syntax
 
-- Single-line directives only: `// #if <expression>` and `// #endif`.
+- Single-line directives only: `// #if <expression>`, `// #else`, `// #elif <expression>` and `// #endif`.
 - The `<expression>` is evaluated at build time with the keys from `variables` available as identifiers.
-  - You can write **literally ANY JavaScript expressions** in it, because it is evaluated as an IIFE(Immediately Invoked Function Expression).
-- Only `#if` and `#endif` are supported(for now). `#else` / `#elif` will be supported in future releases.
+  - You can write **literally ANY JavaScript expressions** in it, because it is evaluated as an IIFE (Immediately Invoked Function Expression).
+  - Supported directives: `#if`, `#else`, `#elif`, `#endif` (similar to C/C++ style conditional compilation).
+- Since it is `if/else` , it follows the syntax of `if/else` statements
 
 ### Example
 
