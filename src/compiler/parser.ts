@@ -99,9 +99,10 @@ export class IfParser {
     const result: IfBlock[] = [];
     const stack: IfBlock[] = [];
 
-    const addIfBlock = (b: DirvBlock, condition: boolean): void => {
+    const addIfBlock = (b: DirvBlock, lastCondition: boolean | null): void => {
       const newIfBlock: IfBlock = {
-        condition: condition,
+        dirv: b.dirv,
+        condition: lastCondition === null ? null : !lastCondition && b.condition,
         children: [],
 
         ifStart: b.start,
@@ -141,15 +142,15 @@ export class IfParser {
       }
 
       // fixme 如果出现elif链，且中间有一节命中了，那么下一节尚且正常condition为false但下下一节（如果恰好为elif true）将会因为下一节是false，导致条件变为!false && true，再次触发
-
+      // todo 思路是：首先记录上一个dirv是什么，如果是命中的if而自己是elif，那么自己的condition改为null。如果下一个elif、else到来看到上一个condition是null，则自己无条件为null
       // $ Here we convert 'elif' and 'else' to 'endif' + 'if not previous condition'
       if (b.dirv === Dirv.Else) {
-        addIfBlock(b, !lastIf.condition);
+        addIfBlock(b, lastIf.condition);
         continue;
       }
 
       if (b.dirv === Dirv.Elif) {
-        addIfBlock(b, !lastIf.condition && b.condition);
+        addIfBlock(b, lastIf.condition);
         continue;
       }
     }

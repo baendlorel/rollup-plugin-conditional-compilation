@@ -13,7 +13,8 @@ declare global {
   }
 
   interface IfBlock {
-    condition: boolean;
+    dirv: Dirv;
+    condition: boolean | null;
     ifStart: number;
     ifEnd: number;
     endifStart: number;
