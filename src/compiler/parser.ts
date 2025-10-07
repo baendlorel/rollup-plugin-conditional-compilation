@@ -20,7 +20,7 @@ export class IfParser {
   /**
    * Analyzing code with acorn
    */
-  proceed(code: string): { code: string; map: null } | null {
+  proceed(code: string): string | null {
     console.log('proceeding...');
 
     const dirvBlocks = this.toDirvBlocks(code);
@@ -29,10 +29,7 @@ export class IfParser {
     }
 
     const ifBlocks = this.toIfBlocks(dirvBlocks);
-    return {
-      code: this.compile(code, ifBlocks),
-      map: null,
-    };
+    return this.compile(code, ifBlocks);
   }
 
   toDirvBlocks(code: string): DirvBlock[] {

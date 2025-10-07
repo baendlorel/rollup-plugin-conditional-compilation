@@ -4,7 +4,7 @@ import { IfParser } from '@/compiler/parser.js';
 describe('IfParser final compile', () => {
   it('evaluate should compute expressions using provided variables', () => {
     const code = loadjs('case5.js');
-    const opts = { variables: { A: true, B: false, C: true } } as any;
+    const opts = { variables: { A: true, B: false, C: true } };
     const parser = new IfParser(opts);
 
     const dirvBlocks = parser.toDirvBlocks(code);
@@ -23,7 +23,7 @@ describe('IfParser final compile', () => {
 
   it('complex case6 should ignore block-commented directives and handle nested indented directives', () => {
     const code = loadjs('case6.js');
-    const opts = { variables: { A: true, B: true, C: false } } as any;
+    const opts = { variables: { A: true, B: true, C: false } };
     const parser = new IfParser(opts);
 
     const dirvBlocks = parser.toDirvBlocks(code);
@@ -45,7 +45,7 @@ describe('IfParser final compile', () => {
   it('case7 should handle numeric expressions and adjacent directives properly', () => {
     const code = loadjs('case7.js');
     // X falsy, Y true, Z true to exercise various branches
-    const opts = { variables: { X: 0, Y: true, Z: true } } as any;
+    const opts = { variables: { X: 0, Y: true, Z: true } };
     const parser = new IfParser(opts);
 
     const dirvBlocks = parser.toDirvBlocks(code);
@@ -60,11 +60,22 @@ describe('IfParser final compile', () => {
     expect(result).toContain('neg');
   });
 
-  it('case8 should be resilient: malformed expr cause evaluate to throw, inline comments ignored', () => {
+  it('case8 malformed expr cause evaluate to throw', () => {
     const code = loadjs('case8.js');
     const opts = { variables: { D: true, A: true } } as any;
     const parser = new IfParser(opts);
 
     expect(() => parser.toDirvBlocks(code)).toThrow();
+  });
+
+  it('case9 handle else', () => {
+    const code = loadjs('case9.js');
+    const parser1 = new IfParser({ variables: { A: true } });
+    const result1 = parser1.proceed(code);
+    expect(result1).toContain("console.log('1');");
+
+    const parser2 = new IfParser({ variables: { A: false } });
+    const result2 = parser2.proceed(code);
+    expect(result2).toContain("console.log('2');");
   });
 });

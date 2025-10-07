@@ -38,7 +38,7 @@ export default {
 
 - Single-line directives only: `// #if <expression>` and `// #endif`.
 - The `<expression>` is evaluated at build time with the keys from `variables` available as identifiers.
-  - You can write literally **ANY** js expression in it, because it is evaluated as an IIFE(Immediately Invoked Function Expression).
+  - You can write **literally ANY JavaScript expressions** in it, because it is evaluated as an IIFE(Immediately Invoked Function Expression).
 - Only `#if` and `#endif` are supported(for now). `#else` / `#elif` will be supported in future releases.
 
 ### Example
