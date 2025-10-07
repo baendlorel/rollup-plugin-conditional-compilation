@@ -10,6 +10,14 @@ describe('IfParser final compile', () => {
     const dirvBlocks = parser.toDirvBlocks(code);
     const ifBlocks = parser.toIfBlocks(dirvBlocks);
     const result = parser.compile(code, ifBlocks);
-    console.log(result);
+    expect(result).not.toContain("console.log('1');");
+    expect(result).not.toContain("console.log('2');");
+    expect(result).not.toContain("console.log('3');");
+    expect(result).not.toContain("console.log('4');");
+    expect(result).not.toContain('#if'); // directive comments removed
+    expect(result).not.toContain('#endif'); // directive comments removed
+    expect(result).toContain("console.log('5');");
+    expect(result).toContain("console.log('6');");
+    expect(result).toContain("console.log('7');");
   });
 });

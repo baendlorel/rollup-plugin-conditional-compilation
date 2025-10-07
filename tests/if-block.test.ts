@@ -57,7 +57,7 @@ inner();
     // positions: outer.start < inner.start < inner.end < outer.end
     expect(outer.ifStart).toBeLessThan(inner.ifStart);
     expect(inner.ifStart).toBeLessThan(inner.ifEnd);
-    expect(inner.ifEnd).toBeLessThan(outer.ifEnd);
+    expect(inner.endifEnd).toBeLessThan(outer.endifEnd);
   });
 
   it('collect multiple and nested if blocks correctly', () => {
