@@ -89,20 +89,47 @@ export class IfParser {
     if (blocks.length === 0) {
       return [];
     } else if (blocks.length === 1) {
-      throw new Error(`Must have at least 2 directives, got orphaned '${blocks[0].dirv}'`);
+      console.warn(cdcp_warning.not_enough_blocks.replace('$0', blocks[0].dirv));
+      return [];
     }
 
-    if (blocks.some((v, i) => v.dirv === Dirv.Else && i > 0 && blocks[i - 1].dirv === Dirv.Else)) {
-      throw new Error('Cannot have consecutive #else directives');
+    for (let i = 1; i < blocks.length; i++) {
+      const d = blocks[i].dirv;
+      if (blocks[i - 1].dirv === Dirv.Else && (d === Dirv.Else || d === Dirv.Elif)) {
+        throw new Error(cdcp_error.syntax_no_else_or_elif_after_else);
+      }
     }
 
     const result: IfBlock[] = [];
     const stack: IfBlock[] = [];
 
-    const addIfBlock = (b: DirvBlock, lastCondition: boolean | null): void => {
+    const addIfBlock = (b: DirvBlock, last?: IfBlock): void => {
+      let condition: boolean | null = true;
+
+      if (b.dirv === Dirv.If) {
+        condition = b.condition;
+
+        // * Since #endif won't call this function, we can directly use 'else' here
+        // `last` here is always truthy because only #if enteres will no `last` needed
+      } else {
+        if (!last) throw new Error("Internal error: 'last' is required for #elif and #else");
+
+        // * Here, last IfBlock can only be #if or #elif.
+        // - if last is #else, it will be blocked by 'cdcp_error.syntax_no_else_or_elif_after_else' check above
+        // - if last is #endif, it will not have been passed in here
+        if (last.condition === true) {
+          condition = null;
+        } else if (last.condition === null) {
+          // null should propagate down the #elif/#else chain
+          condition = null;
+        } else {
+          condition = !last.condition && b.condition;
+        }
+      }
+
       const newIfBlock: IfBlock = {
         dirv: b.dirv,
-        condition: lastCondition === null ? null : !lastCondition && b.condition,
+        condition,
         children: [],
 
         ifStart: b.start,
@@ -123,7 +150,7 @@ export class IfParser {
     for (let i = 0; i < blocks.length; i++) {
       const b = blocks[i];
       if (b.dirv === Dirv.If) {
-        addIfBlock(b, b.condition);
+        addIfBlock(b);
         continue;
       }
 
@@ -133,9 +160,9 @@ export class IfParser {
       if (stack.length === 0) {
         throw new Error(`Unmatched '${b.dirv}' at ${b.start}:${b.end}`);
       }
-      const lastIf = stack.pop() as IfBlock;
-      lastIf.endifStart = b.start;
-      lastIf.endifEnd = b.end;
+      const last = stack.pop() as IfBlock;
+      last.endifStart = b.start;
+      last.endifEnd = b.end;
 
       if (b.dirv === Dirv.Endif) {
         continue;
@@ -145,12 +172,12 @@ export class IfParser {
       // todo 思路是：首先记录上一个dirv是什么，如果是命中的if而自己是elif，那么自己的condition改为null。如果下一个elif、else到来看到上一个condition是null，则自己无条件为null
       // $ Here we convert 'elif' and 'else' to 'endif' + 'if not previous condition'
       if (b.dirv === Dirv.Else) {
-        addIfBlock(b, lastIf.condition);
+        addIfBlock(b, last);
         continue;
       }
 
       if (b.dirv === Dirv.Elif) {
-        addIfBlock(b, lastIf.condition);
+        addIfBlock(b, last);
         continue;
       }
     }
