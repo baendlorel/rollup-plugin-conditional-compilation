@@ -13,6 +13,8 @@ console.log('never4');
 console.log('never5');
 // #endif
 
+//!divider
+
 // Deep nesting with mixed if/elif/else at different levels
 // #if LEVEL1
 console.log('L1-start');

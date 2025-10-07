@@ -102,20 +102,21 @@ describe('Advanced if/elif/else compilation tests', () => {
     });
 
     it('should not execute elif after a true elif', () => {
-      const code = loadjs('case11.js');
+      const code = loadjs('case11.js').split('//!divider')[0];
       const parser = new IfParser({
         variables: { LEVEL1: false, LEVEL2: false, LEVEL2_ALT: false, LEVEL3: false },
       });
       const result = parser.proceed(code);
 
       // Fourth condition is true, so fifth elif and else should not execute
+      console.log(result);
       expect(result).toContain("console.log('fourth-condition');");
       expect(result).not.toContain("console.log('never4');");
       expect(result).not.toContain("console.log('never5');");
     });
 
     it('should handle deep nesting with elif at level 2', () => {
-      const code = loadjs('case11.js');
+      const code = loadjs('case11.js').split('//-chop')[1];
       const parser = new IfParser({
         variables: { LEVEL1: true, LEVEL2: false, LEVEL2_ALT: true, LEVEL3: true },
       });

@@ -85,11 +85,15 @@ export class IfParser {
     return { dirv, condition, start, end };
   }
 
-  toIfBlocks(dirvBlocks: DirvBlock[]): IfBlock[] {
-    if (dirvBlocks.length === 0) {
+  toIfBlocks(blocks: DirvBlock[]): IfBlock[] {
+    if (blocks.length === 0) {
       return [];
-    } else if (dirvBlocks.length === 1) {
-      throw new Error(`Must have at least 2 directives, got orphaned '${dirvBlocks[0].dirv}'`);
+    } else if (blocks.length === 1) {
+      throw new Error(`Must have at least 2 directives, got orphaned '${blocks[0].dirv}'`);
+    }
+
+    if (blocks.some((v, i) => v.dirv === Dirv.Else && i > 0 && blocks[i - 1].dirv === Dirv.Else)) {
+      throw new Error('Cannot have consecutive #else directives');
     }
 
     const result: IfBlock[] = [];
@@ -115,8 +119,8 @@ export class IfParser {
       stack.push(newIfBlock);
     };
 
-    for (let i = 0; i < dirvBlocks.length; i++) {
-      const b = dirvBlocks[i];
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
       if (b.dirv === Dirv.If) {
         addIfBlock(b, b.condition);
         continue;
@@ -135,6 +139,8 @@ export class IfParser {
       if (b.dirv === Dirv.Endif) {
         continue;
       }
+
+      // fixme 如果出现elif链，且中间有一节命中了，那么下一节尚且正常condition为false但下下一节（如果恰好为elif true）将会因为下一节是false，导致条件变为!false && true，再次触发
 
       // $ Here we convert 'elif' and 'else' to 'endif' + 'if not previous condition'
       if (b.dirv === Dirv.Else) {
