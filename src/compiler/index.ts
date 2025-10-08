@@ -3,6 +3,8 @@ import { RollupConditionalCompilationOptions } from '@/types/common.js';
 import { IfParser } from './parser.js';
 
 /**
+ * ## Usage
+ * Using `// #if` and `// #endif` to do the conditional compilation like C++!
  * @param options options of the plugin
  *
  * __PKG_INFO__

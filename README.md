@@ -20,6 +20,11 @@ console.log('user', userData); // when DEBUG is false, this line will be removed
 - [rollup-plugin-func-macro](https://www.npmjs.com/package/rollup-plugin-func-macro): replace `__func__` by function name of current block, and `__file__` by file name at compile time.
   For more awesome packages, check out [my homepage💛](https://baendlorel.github.io/?repoType=npm)
 
+## Fixed Issues in v1.0.6
+
+1. Added configurable `ecmaVersion` and `sourceType` options to pass to Acorn. Previously, `sourceType` is fixed in this plugin and prevented parsing ES module files; this is now configurable.
+2. Fixed an issue where `variables` was required; `variables` is now optional.
+
 ## Installation
 
 ```bash
@@ -34,11 +39,13 @@ import conditional from 'rollup-plugin-conditional-compilation';
 export default {
   ...other configs,
   plugins: [
+    // Recommended: run `conditional` before the TypeScript transformer so the
+    // plugin operates on the original source comments.
+    conditional({ variables: { DEBUG: false, FEATURE_X: true } }),
     typescript({
       ...,
       removeComments: false, // !!IMPORTANT!! Don't strip comments so quickly!
     }),
-    conditional({ variables: { DEBUG: false, FEATURE_X: true } })
   ],
 };
 ```
@@ -77,12 +84,12 @@ console.log('always');
 
 ## Behaviors
 
-- **AST Parsing**: Using Acorn with `{ ecmaVersion:"latest" }` to parse the code, so it supports all valid JavaScript syntax.
+- **AST Parsing**: Using Acorn with `{ ecmaVersion: "latest", sourceType: "module" }` by default to parse the code, so it supports the latest JavaScript syntax and ES modules.
 
 - **Directive Style**: Only `//` comments are scanned for directives; block comments (`/* ... */`) are ignored.
   - Reason 1: block comments can span multiple lines with `*` ahead and may contain nested comments, making parsing more complex and error-prone.
-  - Reason 2: I pursue standardization and simplicity! ✨
-- **Precise Evaluation**: Expressions are evaluated with the Function constructor — avoid untrusted expressions and side effects.
+  - Reason 2: For consistency and simplicity.
+- **Precise Evaluation**: Expressions are executed using the Function constructor — do not pass untrusted input or rely on side effects.
 
 ## License
 
