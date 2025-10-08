@@ -14,6 +14,12 @@ export class IfParser {
     }
   }
 
+  // #if DEBUG
+  getPrivate() {
+    return 'someimportantinfo';
+  }
+  // #endif
+
   /**
    * Analyzing code with acorn
    */

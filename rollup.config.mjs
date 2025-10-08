@@ -67,11 +67,11 @@ const options = [
       replace(replaceOpts),
       funcMacro(),
       constEnum(),
-      // conditional({ variables: {} }),
+      conditional({ variables: { DEBUG: false } }),
       resolve(),
       commonjs(),
       typescript({ tsconfig, removeComments: false }),
-      terser({
+      void terser({
         format: {
           comments: false, // remove comments
         },
