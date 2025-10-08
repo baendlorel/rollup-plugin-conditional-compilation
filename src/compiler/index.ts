@@ -31,9 +31,19 @@ function normalize(options: Partial<Opts>): Opts {
     throw new Error(`Invalid options: '${options}', must be an object`);
   }
 
-  if (typeof options.variables !== 'object' || options.variables === null) {
-    throw new Error(`Invalid variables: '${options.variables}', must be an object`);
+  const { variables = {}, ecmaVersion = 'latest', sourceType = 'module' } = options;
+
+  if (typeof variables !== 'object' || variables === null) {
+    throw new Error(`Invalid variables: '${variables}', must be an object`);
   }
 
-  return { variables: options.variables };
+  if (!Consts.EcmaVersions.split(',').includes(String(ecmaVersion))) {
+    throw new Error(`Invalid ecmaVersion: '${ecmaVersion}', must be one of ${Consts.EcmaVersions}`);
+  }
+
+  if (!Consts.SourceType.split(',').includes(sourceType)) {
+    throw new Error(`Invalid sourceType: '${ecmaVersion}', must be one of ${Consts.SourceType}`);
+  }
+
+  return { variables, ecmaVersion, sourceType };
 }

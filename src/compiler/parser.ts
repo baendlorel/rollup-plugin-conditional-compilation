@@ -32,7 +32,8 @@ export class IfParser {
     const toBlock: typeof this.tryParseToBlock = (r, s, e) => this.tryParseToBlock(r, s, e);
 
     acorn.parse(code, {
-      ecmaVersion: 'latest',
+      ecmaVersion: this._opts.ecmaVersion,
+      sourceType: this._opts.sourceType,
       /**
        * @param isBlock whether its a '/⋆ ... ⋆/' comment
        * @param text text inside the comment, excludes the boundaries

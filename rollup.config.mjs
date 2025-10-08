@@ -10,9 +10,9 @@ import alias from '@rollup/plugin-alias';
 import terser from '@rollup/plugin-terser';
 import replace from '@rollup/plugin-replace';
 import dts from 'rollup-plugin-dts';
-import dtsMerger from 'rollup-plugin-dts-merger';
 import funcMacro from 'rollup-plugin-func-macro';
 import constEnum from 'rollup-plugin-const-enum';
+import conditional from './node_modules/rollup-plugin-conditional-compilation/dist/index.mjs';
 
 // custom plugins
 import { replaceLiteralOpts, replaceOpts } from './.scripts/replace.mjs';
@@ -67,6 +67,7 @@ const options = [
       replace(replaceOpts),
       funcMacro(),
       constEnum(),
+      // conditional({ variables: {} }),
       resolve(),
       commonjs(),
       typescript({ tsconfig, removeComments: false }),
