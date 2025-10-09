@@ -38,4 +38,25 @@ declare global {
 
     end: number;
   }
+
+  interface CompileResult {
+    code: string;
+    keptRanges: CodeRange[];
+  }
+
+  interface SourceMapOptions {
+    filename?: string;
+  }
+
+  interface CodeRange {
+    start: number;
+    end: number;
+  }
+
+  interface LineMapping {
+    originalLine: number;
+    originalColumn: number;
+    generatedLine: number;
+    generatedColumn: number;
+  }
 }

@@ -1,6 +1,7 @@
 import type { Plugin } from 'rollup';
 import { RollupConditionalCompilationOptions } from '@/types/common.js';
 import { IfParser } from './parser.js';
+import { createSourceMap } from './sourcemap.js';
 
 /**
  * ## Usage
@@ -19,7 +20,22 @@ export function conditionalCompilation(
     name: '__KEBAB_NAME__',
     transform(code: string, id: string) {
       try {
-        return parser.proceed(code);
+        const result = parser.proceed(code);
+        
+        // If no conditional compilation directives found, return null
+        if (!result) {
+          return null;
+        }
+
+        // Generate sourcemap for the transformed code
+        const map = createSourceMap(code, result.keptRanges, {
+          filename: id,
+        });
+
+        return {
+          code: result.code,
+          map,
+        };
       } catch (error) {
         console.error('parsing error occured:', error);
         this.error(`error in ${id} - ${error instanceof Error ? error.message : error}`);

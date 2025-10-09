@@ -23,7 +23,7 @@ export class IfParser {
   /**
    * Analyzing code with acorn
    */
-  proceed(code: string): string | null {
+  proceed(code: string): CompileResult | null {
     const dirvBlocks = this.toDirvBlocks(code);
     if (dirvBlocks.length === 0) {
       return null;
@@ -202,7 +202,7 @@ export class IfParser {
    * Apply the transformations to the code
    * - Only handles `ifBlocks.length > 0` here, =0 will be returned outside
    */
-  compile(code: string, ifBlocks: IfBlock[]): string {
+  compile(code: string, ifBlocks: IfBlock[]): CompileResult {
     const keep: number[] = [0]; // if it chops first and last item, it will mean `drop`
 
     const visit = (ifBlock: IfBlock) => {
@@ -225,12 +225,21 @@ export class IfParser {
     // & now we get the indexes needs to be kept
     keep.push(code.length);
 
+    // Build the kept ranges for sourcemap
+    const keptRanges: CodeRange[] = [];
+    for (let i = 0; i < keep.length; i += 2) {
+      keptRanges.push({ start: keep[i], end: keep[i + 1] });
+    }
+
     const result: string[] = [];
     for (let i = 0; i < keep.length; i += 2) {
       result.push(code.slice(keep[i], keep[i + 1]));
     }
 
-    return result.join('');
+    return {
+      code: result.join(''),
+      keptRanges,
+    };
   }
 
   /**
